@@ -10,9 +10,9 @@ This project is a development board intended for flight algorithm design. The in
 
 The purpose is to provide a platform for experimenting with algorithms for take-off, landing, and stabilising (initially) quadcopters. Later, the board should be sufficiently flexible to either expand to other flight form factors or investigate more complex algorithms.
 
-There should be sufficient processing power and the possibility for custom logic (e.g. FPGA) to support a variety of computationally-intensive/ML-based algorithms.
+There should be a CPU with sufficient processing power for basic algorithms and an FPGA to support a variety of computationally-intensive/ML-based algorithms. The FPGA should be interfaced to the CPU as a co-processor.
 
-The board should contain battery and power management, should be chargeable using USB-C, and should provide drive/control circuitry for up to four motors and up to four flight control surfaces.
+The board should contain battery and power management, should be chargeable using USB-C, and should provide drive/control circuitry for up to four motors and up to four flight control surfaces. The drive method should be capable of interfacing to a variety of motors, without changing the development board hardware. 
 
 The board should contain location/motion sensors for providing closed-loop input to the flight control algorithms.
 
@@ -22,8 +22,8 @@ SPI/I2C/UART and general GPIO connections should be available for interfacing ad
 
 = Similar Boards
 
-
+* STMicroelectronics sells a https://www.st.com/en/evaluation-tools/steval-fcu001v1.html[flight control evaluation board] which is similar to the proposed design. It can be used as a reference for the basic aspects of the design.
 
 = Specification
 
-The detailed specifications are outlined below
+The detailed specifications are outlined below.
