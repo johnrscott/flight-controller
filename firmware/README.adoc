@@ -1,0 +1,56 @@
+= Firmware and Software
+
+This is the folder for all software designed to run on the development board. It also contains notes on setting everything up.
+
+== Notes
+
+=== Installing the Cortex-M quickstart 
+
+Following the instructions https://github.com/rust-embedded/cortex-m-quickstart?tab=readme-ov-file#using-this-template[here]:
+
+[,bash]
+----
+cargo install cargo-generate
+rustup target add thumbv6m-none-eabi thumbv7m-none-eabi thumbv7em-none-eabi thumbv7em-none-eabihf
+cargo generate --git https://github.com/rust-embedded/cortex-m-quickstart
+# Set the application name to blinky
+----
+
+In the `blinky` folder Adjust the `memory.x` file to have these contents:
+
+[,bash]
+----
+MEMORY
+{
+  /* TODO: double check these values */
+  FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 1024K
+  RAM (xrw)  : ORIGIN = 0x20000000, LENGTH = 320K
+}
+----
+
+Check that the code builds by running `cargo build`.
+
+Install `probe-rs` as described https://probe.rs/docs/getting-started/installation/[here]:
+
+[,bash]
+----
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/probe-rs/probe-rs/releases/latest/download/probe-rs-tools-installer.sh | sh
+----
+
+To test whether the installation works, connect an ST-LINK v2, and run `probe-rs list`. The output should show the connected ST-LINK programmer.
+
+In `blinky/.cargo/config.toml`, add this `runner` argument specifying the target chip (this choice works for https://www.st.com/en/evaluation-tools/32f746gdiscovery.html[this] DISCO board):
+
+[,toml]
+----
+[target.'cfg(all(target_arch = "arm", target_os = "none"))']
+# uncomment ONE of these three option to make `cargo run` start a GDB session
+# which option to pick depends on your system
+# runner = "arm-none-eabi-gdb -q -x openocd.gdb"
+# runner = "gdb-multiarch -q -x openocd.gdb"
+# runner = "gdb -q -x openocd.gdb"
+runner = "probe-rs run --chip STM32F746NGHx"
+----
+
+NOTE: If you do not know the name of the chip, put in just the first part and run `cargo run`. The tool will print the list of chips whose names match what you inputted.
+
