@@ -1,0 +1,29 @@
+= Flight Controller Development Board
+
+This project is a development board intended for flight algorithm design. The intention is to create a board that can plug into multiple different vehicle structures, e.g.
+
+* Quadcopter
+* Helicopter
+* Fixed-wing
+
+= "User requirements"/Purpose
+
+The purpose is to provide a platform for experimenting with algorithms for take-off, landing, and stabilising (initially) quadcopters. Later, the board should be sufficiently flexible to either expand to other flight form factors or investigate more complex algorithms.
+
+There should be sufficient processing power and the possibility for custom logic (e.g. FPGA) to support a variety of computationally-intensive/ML-based algorithms.
+
+The board should contain battery and power management, should be chargeable using USB-C, and should provide drive/control circuitry for up to four motors and up to four flight control surfaces.
+
+The board should contain location/motion sensors for providing closed-loop input to the flight control algorithms.
+
+There should be support WiFi and Bluetooth connectivity for basic control, and should support extending for RF-based remote control. This anticipates initial experiments mainly targeting the closed loop control algorithms, have minimal external input. Full flight testing (involving longer range communication) is a later step
+
+SPI/I2C/UART and general GPIO connections should be available for interfacing additional modules to the flight controller later, to make the platform adaptable as requirements change.
+
+= Similar Boards
+
+
+
+= Specification
+
+The detailed specifications are outlined below
