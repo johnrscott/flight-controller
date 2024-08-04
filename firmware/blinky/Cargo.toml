@@ -24,6 +24,10 @@ panic-halt = "0.2.0"
 # features = ["stm32f303", "rt"]
 # version = "0.7.1"
 
+[dependencies.stm32f7xx-hal]
+version = "0.7.0"
+features = ["stm32f746", "rt"]
+
 # this lets you use `cargo fix`!
 [[bin]]
 name = "blinky"
