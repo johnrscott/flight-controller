@@ -1,0 +1,9 @@
+= Minimal embedded rust example for STM32F746
+
+To run the example on https://www.st.com/en/evaluation-tools/32f746gdiscovery.html[this] DISCO board, run:
+
+[,bash]
+----
+cargo build
+./run.sh
+----
