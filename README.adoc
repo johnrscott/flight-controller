@@ -23,6 +23,8 @@ SPI/I2C/UART and general GPIO connections should be available for interfacing ad
 = Similar Boards
 
 * STMicroelectronics sells a https://www.st.com/en/evaluation-tools/steval-fcu001v1.html[flight control evaluation board] which is similar to the proposed design. It can be used as a reference for the basic aspects of the design.
+* https://holybro.com/products/kakute-f722[Kakute F722 Flight Controller] is a small (8 g), cheap, board which is based around an STM32F7 MCU, with support for multiple peripherals including sensor inputs and motor drives. The flight controller is used in https://sites.bu.edu/uav/first-build/step1/[This design guide], which also uses the https://holybro.com/products/tekko32-f4-4in1-50a-esc[Tekko32 F4 4in1 50A ESC] (supports four motors, 13.8 g). 
+
 
 = Specification
 
