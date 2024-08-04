@@ -1,1 +1,6 @@
+# Emacs config file
 *~
+
+# Rust build directory
+target/
+
