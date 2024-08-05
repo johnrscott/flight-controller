@@ -2,11 +2,13 @@
 
 *Integrated flight controller, electronic speed controller and server controller, and power management board.*
 
-This project is a development board intended for flight algorithm design. The intention is to create a board that can plug into multiple different vehicle structures, e.g.
+This project is a development board intended for flight algorithm design. The overall design goals are:
 
-* Quadcopter
-* Helicopter
-* Fixed-wing
+* 🚀 Sufficient processing power to investigate a wide range of flight control methods and algorithms.
+* 📡 Location and motion sensors including GPS.
+* 🛜 WiFi and Bluetooth support for simple communication (a stand-in for radio communication for ground experimenting).
+* 🔋 Full battery management including USB-C charging for LiPo batteries (mainly for convenience, and because I want to learn about PD controllers!). 
+* 🚁 Potential for future versions to plug into fixed-wing and helicopter remote control vehicles.
 
 = "User requirements"/Purpose
 
