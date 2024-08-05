@@ -8,20 +8,25 @@ This project is a development board intended for flight algorithm design. The ov
 * 📡 Location and motion sensors including GPS.
 * 🛜 WiFi and Bluetooth support for simple communication.
 * 🔋 Full battery management including USB-C charging for LiPo batteries.
+* 📷 Built-in HD camera support, for algorithm use and for sending back to base.
 * ➕ A range of peripherals such as I2C/SPI/UART for expansion modules.
 * 🚁 Future versions to plug into fixed-wing and helicopter remote control vehicles.
 
 = "User requirements"/Purpose
 
-The purpose is to provide a platform for experimenting with algorithms for take-off, landing, and stabilising (initially) quadcopters. Later, the board should be sufficiently flexible to either expand to other flight form factors or investigate more complex algorithms.
+The purpose is to provide a platform for experimenting with algorithms for take-off, landing, and stabilising (initially) quadcopters. Later, the board should be sufficiently flexible to either expand to other flight form factors or investigate more complex algorithms. However, due to the range of different form factors for flying vehicles, we will not explicitly design this functionality in the first version -- just keep an eye on the bigger picture.
 
-There should be a CPU with sufficient processing power for basic algorithms and an FPGA to support a variety of computationally-intensive/ML-based algorithms. The FPGA should be interfaced to the CPU as a co-processor.
+The CPU should have sufficient processing power for basic algorithms and an FPGA co-processor will provide flexibility for custom high-performance algorithms not suited to the CPU.
 
-The board should contain battery and power management, should be chargeable using USB-C, and should provide drive/control circuitry for up to four motors and up to four flight control surfaces. The drive method should be capable of interfacing to a variety of motors, without changing the development board hardware. 
+The camera input is intended to capture first-person images from the flight and send them back to the base. However, it is anticipated that the images may also be used in the flight algorithms (obstacle detection, tracking, etc.) and the associated image-processing algorithms may be suited for FPGA implementation.
 
-The board should contain location/motion sensors for providing closed-loop input to the flight control algorithms.
+The board should contain battery and power management, should be chargeable using USB-C, and should provide drive/control circuitry for up to four motors and up to four flight control surfaces. Flight control surfaces are not necessary for the quadcopter, but including them would enable the unit to be repurposed to control fixed-wing vehicles without too much additional effort.
 
-There should be support WiFi and Bluetooth connectivity for basic control, and should support extending for RF-based remote control. This anticipates initial experiments mainly targeting the closed loop control algorithms, have minimal external input. Full flight testing (involving longer range communication) is a later step
+Only three-phase brush-less sensor-less motors will be used in the first version of the board. These are more efficient and more robust than the brushed alternative, and sensor-less operation is sufficient given the high speed of the motors.
+
+The board should contain location/motion sensors for providing closed-loop input to the flight control algorithms, and any other purposes.
+
+There should be support WiFi and Bluetooth connectivity for basic control, and should support extending for RF-based remote control. This anticipates initial experiments mainly targeting the closed loop control algorithms, having minimal external input (likely over a short range, in a WiFi environment). Full flight testing (involving longer range communication) is a second step.
 
 SPI/I2C/UART and general GPIO connections should be available for interfacing additional modules to the flight controller later, to make the platform adaptable as requirements change.
 
@@ -30,31 +35,13 @@ SPI/I2C/UART and general GPIO connections should be available for interfacing ad
 * STMicroelectronics sells a https://www.st.com/en/evaluation-tools/steval-fcu001v1.html[flight control evaluation board] which is similar to the proposed design. It can be used as a reference for the basic aspects of the design.
 * https://holybro.com/products/kakute-f722[Kakute F722 Flight Controller] is a small (8 g), cheap, board which is based around an STM32F7 MCU, with support for multiple peripherals including sensor inputs and motor drives. The flight controller is used in https://sites.bu.edu/uav/first-build/step1/[This design guide], which also uses the https://holybro.com/products/tekko32-f4-4in1-50a-esc[Tekko32 F4 4in1 50A ESC] (supports four motors, 13.8 g). 
 
+= Overall Architecture
 
-= Intended Targets
+This design combines the responsibilities normally assigned to separate flight controller board, an electronic speed controller, and a power supply board. The intention is that the result is easy to use and can form the basis for a simple quadcopter design.
 
-The board is intended to support the following types of vehicle:
 
-== Quadcopter
 
-Four motors and no servos are required for a quadcopter. The motors that will be used are sensor-less brush-less motors (three-phase), so the board must be able to support at least four of these motors.
 
-== Aeroplane
-
-An aeroplane requires one main motor (or two if dual-propellers are used), which is a brush-less sensor-less type.
-
-In addition, up to five servos are required: two for the ailerons, one for the elevator, and one for the rudder. An additional servo may be required for a rear wheel, or another function.
-
-== Helicopter
-
-A helicopter requires two motors, one for the main rotor and one for the tail rotor. By having two separate motors for the main and tail rotors, no tail-pitch servo is required (because the tail rotor speed is independent of the main rotor).
-
-An overview of servos required for a helicopter is https://www.rchelicopterfun.com/rc-servos.html[this article]. Three servos are required 
-
-The servo notes below are generally applicable to all servos:
-
-* Typical servos controlled with PWM with update frequency of 50Hz, but some go up to 560 Hz. The position of the servo is set by high-time of the PWM signal; typically, the range is 1 ms to 2 ms for the full servo range of motion, with about 1.5 ms the central position.
-
-= Specification
+= Detailed Specification
 
 The detailed specifications are outlined below.
