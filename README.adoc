@@ -1,4 +1,6 @@
-= Flight Controller Development Board
+= All-In-One Flight Controller Development Board
+
+*Integrated flight controller, electronic speed controller and server controller, and power management board.*
 
 This project is a development board intended for flight algorithm design. The intention is to create a board that can plug into multiple different vehicle structures, e.g.
 
@@ -25,6 +27,30 @@ SPI/I2C/UART and general GPIO connections should be available for interfacing ad
 * STMicroelectronics sells a https://www.st.com/en/evaluation-tools/steval-fcu001v1.html[flight control evaluation board] which is similar to the proposed design. It can be used as a reference for the basic aspects of the design.
 * https://holybro.com/products/kakute-f722[Kakute F722 Flight Controller] is a small (8 g), cheap, board which is based around an STM32F7 MCU, with support for multiple peripherals including sensor inputs and motor drives. The flight controller is used in https://sites.bu.edu/uav/first-build/step1/[This design guide], which also uses the https://holybro.com/products/tekko32-f4-4in1-50a-esc[Tekko32 F4 4in1 50A ESC] (supports four motors, 13.8 g). 
 
+
+= Intended Targets
+
+The board is intended to support the following types of vehicle:
+
+== Quadcopter
+
+Four motors and no servos are required for a quadcopter. The motors that will be used are sensor-less brush-less motors (three-phase), so the board must be able to support at least four of these motors.
+
+== Aeroplane
+
+An aeroplane requires one main motor (or two if dual-propellers are used), which is a brush-less sensor-less type.
+
+In addition, up to five servos are required: two for the ailerons, one for the elevator, and one for the rudder. An additional servo may be required for a rear wheel, or another function.
+
+== Helicopter
+
+A helicopter requires two motors, one for the main rotor and one for the tail rotor. By having two separate motors for the main and tail rotors, no tail-pitch servo is required (because the tail rotor speed is independent of the main rotor).
+
+An overview of servos required for a helicopter is https://www.rchelicopterfun.com/rc-servos.html[this article]. Three servos are required 
+
+The servo notes below are generally applicable to all servos:
+
+* Typical servos controlled with PWM with update frequency of 50Hz, but some go up to 560 Hz. The position of the servo is set by high-time of the PWM signal; typically, the range is 1 ms to 2 ms for the full servo range of motion, with about 1.5 ms the central position.
 
 = Specification
 
