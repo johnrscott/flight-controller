@@ -6,7 +6,8 @@ This project is a development board intended for flight algorithm design. The ov
 
 * 🚀 Generous processing power to investigate a wide range of flight control methods and algorithms.
 * 📡 Barometric pressure (altitude), GPS, accelerometer (motion), and magnetometer (compass) sensors.
-* 🛜 WiFi and Bluetooth support for simple communication.
+* 🛜 WiFi and Bluetooth support for simple communication/experimentation.
+* 📻 Radio control with minimum four channels supporting standard protocols. 
 * 🔋 Full battery management including USB-C charging for LiPo batteries.
 * 📷 Built-in HD camera support, for algorithm use and for sending back to base.
 * ➕ A range of peripherals such as I2C/SPI/UART for expansion modules.
