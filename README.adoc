@@ -4,11 +4,12 @@
 
 This project is a development board intended for flight algorithm design. The overall design goals are:
 
-* 🚀 Sufficient processing power to investigate a wide range of flight control methods and algorithms.
+* 🚀 Generous processing power to investigate a wide range of flight control methods and algorithms.
 * 📡 Location and motion sensors including GPS.
-* 🛜 WiFi and Bluetooth support for simple communication (a stand-in for radio communication for ground experimenting).
-* 🔋 Full battery management including USB-C charging for LiPo batteries (mainly for convenience, and because I want to learn about PD controllers!). 
-* 🚁 Potential for future versions to plug into fixed-wing and helicopter remote control vehicles.
+* 🛜 WiFi and Bluetooth support for simple communication.
+* 🔋 Full battery management including USB-C charging for LiPo batteries.
+* ➕ A range of peripherals such as I2C/SPI/UART for expansion modules.
+* 🚁 Future versions to plug into fixed-wing and helicopter remote control vehicles.
 
 = "User requirements"/Purpose
 
