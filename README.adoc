@@ -5,7 +5,7 @@
 This project is a development board intended for flight algorithm design. The overall design goals are:
 
 * 🚀 Generous processing power to investigate a wide range of flight control methods and algorithms.
-* 🏍️ Four motor drivers for quadcopter (including brushless sensorless motor control)
+* 🏍️ Four brushless sensorless motor drivers with control, targeting quadcopters.
 * ⚙️ Four servo drivers for general purpose use and extension to fixed-wing control.
 * 📡 Barometric pressure (altitude), GPS, accelerometer (motion), and magnetometer (compass) sensors.
 * 🛜 WiFi and Bluetooth support for simple communication/experimentation.
