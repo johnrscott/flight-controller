@@ -5,7 +5,7 @@
 This project is a development board intended for flight algorithm design. The overall design goals are:
 
 * 🚀 Generous processing power to investigate a wide range of flight control methods and algorithms.
-* 📡 Location and motion sensors including GPS.
+* 📡 On-board barometric pressure (altitude), GPS, accelerometer (motion), and magnetometer (compass) sensors.
 * 🛜 WiFi and Bluetooth support for simple communication.
 * 🔋 Full battery management including USB-C charging for LiPo batteries.
 * 📷 Built-in HD camera support, for algorithm use and for sending back to base.
