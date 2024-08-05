@@ -1,6 +1,6 @@
 = All-In-One Flight Controller Development Board
 
-*Integrated flight controller, electronic speed controller and server controller, and power management board.*
+*Integrated flight controller, electronic speed controller and servo controller, and power management board, initially for quadcopter use.*
 
 This project is a development board intended for flight algorithm design. The overall design goals are:
 
