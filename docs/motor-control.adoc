@@ -1,0 +1,7 @@
+= Motor Control
+
+This page contains notes on the motor control system. Many drones use brushless motors due to their better efficiency and power-to-weight ratio. A simple approach to controlling these motors is sensorless control (using the back-EMF to establish motor phase), which is appropriate because the RPM of drone motors is typically high and not subject to extreme fluctuations in torque.
+
+A good introduction to three-phase motor control is `appnote-brushless-dc-motor-control.pdf` (in the `reference` folder). This page focuses on basic experiments in motor control using the sensorless approach.
+
+(More advanced methods using https://cormack.xyz/FOC/[field-oriented] control will be tested later.)
