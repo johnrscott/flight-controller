@@ -33,18 +33,68 @@ There should be support WiFi and Bluetooth connectivity for basic control, and s
 
 SPI/I2C/UART and general GPIO connections should be available for interfacing additional modules to the flight controller later, to make the platform adaptable as requirements change.
 
-= Similar Boards
+= Quadcopter Design
 
-* STMicroelectronics sells a https://www.st.com/en/evaluation-tools/steval-fcu001v1.html[flight control evaluation board] which is similar to the proposed design. It can be used as a reference for the basic aspects of the design.
-* https://holybro.com/products/kakute-f722[Kakute F722 Flight Controller] is a small (8 g), cheap, board which is based around an STM32F7 MCU, with support for multiple peripherals including sensor inputs and motor drives. The flight controller is used in https://sites.bu.edu/uav/first-build/step1/[This design guide], which also uses the https://holybro.com/products/tekko32-f4-4in1-50a-esc[Tekko32 F4 4in1 50A ESC] (supports four motors, 13.8 g). 
+The quadcopter design used as the basis for the flight controller design is described here. The design is based on the methodology outlined in https://www.youtube.com/watch?v=tCouTFibtPc[this video]. Swapped out the frame due to availability.
+
+The maximum weight for this design will be 250 g. Note that the drone will have a camera, so it still https://aircamdrone.co.uk/drones-under-250g-what-are-the-rules/[requires registration]  (see also https://www.caa.co.uk/drones/rules-and-categories-of-drone-flying/introduction-to-drone-flying-and-the-uk-rules/[here]). The primary reason for this weight restriction is to reduce size/complexity for the development prototype.
+
+The fixed components of the design are as follows:
+
+* https://www.unmannedtechshop.co.uk/product/aos-3-5-freestyle-quadcopter-frame/[AOS 3.5 V5 Freestyle Quadcopter Frame]
+* https://www.hobbyrc.co.uk/t-motor-p1604-3800kv-motor[T-Motor P1604 3800KV Motor] Look for recommendations from the manufacturer's website, in case they recommend motors for the frame. Pay attention to the motor landing pattern to check the screw locations match up with the frame.
+* 4S batteries. This constrained by the voltage of the motor choice (see the https://shop.tmotor.com/products/new-pacer-p1604-fpv-drone-freestyle-motor?sku=18064664726214499451560975[motor specifications]).
+
+For reference, the electronics used in this design (to be replaced by this project!) is:
+
+* https://betafpv.com/products/toothpick-f405-2-4s-aio-brushless-flight-controller-20a-blheli_32-v4[Toothpick F405 2-4S AIO Brushless Flight Controller 20A (BLHELI_32) V4]. The F405 refers to the https://www.st.com/en/microcontrollers-microprocessors/stm32f405-415.html[STM32F405].
+* https://www.hobbyrc.co.uk/hdzero-whoop-lite-bundle[HDZero Whoop Lite Bundle]. This includes the camera, VTX (video transmitted), and antenna.
+* https://www.radiomasterrc.com/products/rp2-expresslrs-2-4ghz-nano-receiver[RP2 V2 ExpressLRS 2.4ghz Nano Receiver].
 
 = Overall Architecture
 
 This design combines the responsibilities normally assigned to separate flight controller board, an electronic speed controller, and a power supply board. The intention is that the result is easy to use and can form the basis for a simple quadcopter design.
 
+== Main MCU
+
+A top-level decision is whether to use the same MCU for both the main microcontroller (flight controller) and the motor control (the ESC), or whether to offload the motor control to a second MCU. The advantage of the former option is simplicity, but disadvantages include finding MCUs with sufficient processing capability and PWM peripherals in the same package.
+
+If multiple MCUs are used, it would be easier if they are from one provider to simplify the software toolchain requirements. As a result, the comparisons below are arranged by manufacturer.
+
+=== STMicroelectronics
+
+This microcontroller is a good option for an all-in-one MCU (including motor control), because it is a dual core device (the Cortex M7 could be used as the main MCU with the Cortex M4 being used for motor control). Only 2 "advanced motor control timers" are available, but it may be possible to manually achieve the required motor and servo control using the other timers.
+
+The advantage of the motor control timers is having 6 channels (with programmable dead-time) for driving the motor stage. The general-purpose timers only have four channels, making them less convenient for three-phase control. However, it is possible to synchronise the timers together.
+
+In the STM32H747xI/G series, there are 10 of these general purpose timers, so 5 pairs of 8 channel PWM outputs (provided they can be synchronised appropriately). 
+
+An alternative is the STM32G474 lines, having 3 advanced motor control timers, and one high resolution timer which looks like it might be usable as a motor controller. In this case, it would still be necessary to program two types of peripheral to drive the motors.
+
+=== Microchip
+
+Microchip has a strong range of motor control products (see  https://www.microchip.com/en-us/solutions/technologies/motor-control-and-drive[here] for a table, and https://www.microchip.com/en-us/solutions/technologies/motor-control-and-drive/motor-control-products/32-bit-microcontrollers-for-motor-control-applications[here] for an overview of the SAM/32-bit products). However, the high-performance MCUs listed here are limited to two motor control peripherals.
+
+=== Renesas
+
+https://www.renesas.com/us/en/blogs/controlling-multiple-motors-single-mcu-example-4-motor-control-rx72t[This article] describes driving four brushless motors using the https://www.renesas.com/us/en/products/microcontrollers-microprocessors/rx-32-bit-performance-efficiency-mcus/rx72t-32-bit-high-performance-200-mhz-operation-microcontroller-optimized-motor-control-industrial-home[RX72T] MCU. 
+
+=== ESP32
+
+The https://docs.espressif.com/projects/esp-idf/en/v4.4/esp32/hw-reference/chip-series-comparison.html[chip comparison] shows that the ESP32 series (no suffix, 2016) contains two motor-control PWMs (MCPWM) and 16 channels of LED PWM. It is not 
 
 
 
 = Detailed Specification
 
 The detailed specifications are outlined below.
+
+
+= Resources
+
+* https://www.anyleaf.org/blog/quadcopter-flight-controller-mcu-comparison[Comparison of quadcopter MCUs]
+* https://www.powerelectronicsnews.com/designing-an-esc-module-to-control-drone-motors/[ESC Design Article]
+
+= Flight Control Firmware
+
+* https://ardupilot.org/[Ardupilot]
