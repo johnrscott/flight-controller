@@ -1,0 +1,6 @@
+= Notes
+
+* FD6288T: The 3-phase bridge driver used in the Toothpick F405 2-4S AIO V4.
+* STM32F051K66: The MCU used (per brushless motor) as the motor controller in Toothpick F405 2-4S AIO V4.
+* AON7544: The motor drive (H-bridge)  MOSFETs used in BetaFPV Toothpick 20A F405 4S AIO V5. They are rated at 30A.
+* 
