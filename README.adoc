@@ -41,8 +41,9 @@ The maximum weight for this design will be 250 g. Note that the drone will have 
 
 The fixed components of the design are as follows:
 
-* https://www.unmannedtechshop.co.uk/product/aos-3-5-freestyle-quadcopter-frame/[AOS 3.5 V5 Freestyle Quadcopter Frame]
+* https://www.hobbyrc.co.uk/aos-35-v5-frame-kit[AOS 3.5 V5 Freestyle Quadcopter Frame]
 * https://www.hobbyrc.co.uk/t-motor-p1604-3800kv-motor[T-Motor P1604 3800KV Motor] Look for recommendations from the manufacturer's website, in case they recommend motors for the frame. Pay attention to the motor landing pattern to check the screw locations match up with the frame.
+* https://www.hobbyrc.co.uk/emax-avan-35x28x3-propellors-red[EMAX Avan 3.5x2.8x3 Propellors].
 * 4S batteries. This constrained by the voltage of the motor choice (see the https://shop.tmotor.com/products/new-pacer-p1604-fpv-drone-freestyle-motor?sku=18064664726214499451560975[motor specifications]).
 
 For reference, the electronics used in this design (to be replaced by this project!) is:
