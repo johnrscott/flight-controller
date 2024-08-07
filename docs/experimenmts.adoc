@@ -15,12 +15,6 @@ A good introduction to three-phase motor control is `appnote-brushless-dc-motor-
 
 (More advanced methods using https://cormack.xyz/FOC/[field-oriented] control will be tested later.)
 
-=== Brushless DC Motor Control using STM32F746
-
-The first experiment is intended to establish whether PWM from general-purpose timers can control multiple BLDC motors. We will use the https://www.st.com/en/evaluation-tools/32f746gdiscovery.html[STM32F746-DISCO] board (because I have that lying around), and will follow the design used in the https://www.st.com/en/evaluation-tools/b-g431b-esc1.html[B-G431B-ESC1] evaluation board:
-
-* L638E, high voltage high/low-side driver, up to 600V, \~ 50ns rise/fall with 1nF load, \~ 0.5A gate drive source/sink. Will replace with similar part IR2109PBF, which has a lower drive strength and slower switching time, but the through-hole version is available. Lower performance will produce a better lower bound on requirements if it works.
-* STL180N6F7, N-channel 60V, 1.9mOhm, 120A MOSFET. Will replace with STP36NF06L, with reduced current to 30A (this is what is used in the reference Toothpick AIO design). It has an input capacitance of 600pF.
 
 
 == Sensors

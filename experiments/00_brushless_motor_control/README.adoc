@@ -28,7 +28,7 @@ TODO: add a picture of the wiring.
 
 We will use this opportunity to try using Rust for something non-trivial with the STM32F7 series.
 
-Although it is not clearly stated on the summary page of the STM32F746 datasheet, this MCU does have advanced motor control timers (TIM1 and TIM8). We will program this peripheral first, so that we can benchmark the performance of the regular timers against it.
+Although it is not clearly stated on the summary page of the STM32F746 datasheet, this MCU does have advanced control timers (TIM1 and TIM8). These timers have four channels, each of which has a positive and a complement pin (used for the high and low side of a half-H bridge). Three of these channels are suitable to drive a three-phase brushless motor.
 
 A very quick test using the minimal project `pwm`, based on https://github.com/stm32-rs/stm32f7xx-hal/blob/main/examples/pwm.rs[this example], works on the STM32F746 DISCO board. The relevant lines to configure the PWM in Rust are:
 
@@ -56,8 +56,34 @@ ch2.set_duty(max_duty / 4);
 ch2.enable();
 ----
 
-An immediate problem is the lack of conveniently-mapped pins on the DISCO board. For the advanced motor control timers 1 or 8, we need all six PWM channels to be accessible. The STM32F7 DISCO board is very heavily utilised, so finding appropriate an appropriate pin configuration will be a challenge.
+An immediate problem is the lack of conveniently-mapped pins on the DISCO board.
 
+From the datasheet, the only timer channels with an easily accessible list of possible alternate pins for the 6 channels of TIM1, along with the pin use on the DISCO board, are:
+
+* TIM1_CH1: PE9 (SDRAM use, data), PA8 (accessible pin header)
+* TIM1_CH1N: PE8 (SDRAM use, data), PA7 (ETH use), PB13 (USB HS use)
+
+* TIM1_CH2: PE11 (SDRAM use, data), PA9 (VCP_TX, part of ST-LINK circuit, SB13 jumper)
+* TIM1_CH2N: TODO
+
+* TIM1_CH3: PE13 (SDRAM use, data), PA10 (ID pin 4 of OTG FS, CN13)
+* TIM1_CH3N: TODO
+
+* TIM1_CH4: PE14 (SDRAM use, data), PA11 (DM pin 2 of OTG FS, CN13)
+* TIM1_CH4N: TODO
+
+From the data above, it is clear that TIM1 cannot be utilised without (probably) modifying the board (e.g. removing the SDRAM module). The same is true for TIM8, which is equally inaccessible. Testing the advanced timers is therefore out of scope for this first experiment.
+
+The timer channels which are accessible on the headers are as follows:
+
+* TIM12_CH1: PH6, pin7 CN4
+* TIM12_CH2: PB15, pin 4 CN7
+* TIM1_CH1: PA8, pin 3 CN7
+* TIM2_CH1: PA15, pin 2 CN7
+* TIM3_CH1: PB4, pin 4 CN4
+* TIM5_CH4: PI0 (letter i, number zero), pin 6 CN4
+
+Luckily, there are six timers here (these exhaust all the timers on the Arduino pin headers), so there is a possibility of three-phase motor control if the peripherals can be synchronised appropriately.
 
 
 
