@@ -1,0 +1,67 @@
+= Brushless DC Motor Control using STM32F746
+
+This experiment is intended to establish whether PWM from general-purpose timers can control multiple BLDC motors. The results should decide whether it is feasible to perform all the motor control logic in a single MCU such as the STM32H747, which only has 2 advanced motor control timers, but has 10 general purpose timers. The advantages of using a single MCU is board simplicity, lower cost, and lower programming and flashing complexity. The disadvantage is any specific deficiencies with using general timers for three-phase PWM, and CPU conflict/contention running multiple motors on one CPU (this seems unlikely given how "slow" the motor control is, but it is worth checking).
+
+== Method
+
+The intention is create simple breadboard-based hardware to drive the T-Motor P1604 3800KV motor. The electrical design of the motor driver can be optimised later; the main intention of this experiment is to test the feasibility of the software.
+
+=== Hardware setup
+
+Using the https://www.st.com/en/evaluation-tools/32f746gdiscovery.html[STM32F746-DISCO] board (because I have that lying around), following the design used in the https://www.st.com/en/evaluation-tools/b-g431b-esc1.html[B-G431B-ESC1] evaluation board.
+
+This evaluation board uses the L638E high voltage high/low-side driver, up to 600V, \~ 50ns rise/fall with 1nF load, \~ 0.5A gate drive source/sink. Will replace with similar part IR2109PBF, which has a lower drive strength and slower switching time, but the through-hole version is available. Lower performance will produce a better lower bound on requirements if it works.
+
+The evaluation board uses STL180N6F7 N-channel 60V, 1.9mOhm, 120A MOSFETs. We will replace with STP36NF06L, with reduced current to 30A (this is what is used in the reference Toothpick AIO design). It has an input capacitance of 600pF.
+
+The following is the list of components required for the hardware setup:
+
+* 1 x T-Motor P1604 3800KV motor (mounted in AOS 3.5 V5 Freestyle Quadcopter Frame for this experiment)
+* 1 x STM32F746 DISCO board
+* 1 x breadboard
+* 3 x IR2109PBF half-bridge driver
+* 6 x STP36NF06L MOSFETs
+
+TODO: add a picture of the wiring.
+
+=== Software setup
+
+We will use this opportunity to try using Rust for something non-trivial with the STM32F7 series.
+
+Although it is not clearly stated on the summary page of the STM32F746 datasheet, this MCU does have advanced motor control timers (TIM1 and TIM8). We will program this peripheral first, so that we can benchmark the performance of the regular timers against it.
+
+A very quick test using the minimal project `pwm`, based on https://github.com/stm32-rs/stm32f7xx-hal/blob/main/examples/pwm.rs[this example], works on the STM32F746 DISCO board. The relevant lines to configure the PWM in Rust are:
+
+[,rust]
+----
+// PA8 is pin 3 on CN7 on the Arduino header of the board. It
+// corresponds to TIM1_CH1 (the into_alternate followed by passing
+// it to the TIM1.pwm_hz() call configures the pin).
+//
+// PA9 is not mapped to any easily accessible pin on the DISCO board,
+// but you can touch an oscilloscope probe on the SB13 bridge to see
+// the signal
+let gpioa = dp.GPIOA.split();
+let channels = (gpioa.pa8.into_alternate(), gpioa.pa9.into_alternate());
+
+let pwm = dp.TIM1.pwm_hz(channels, 20.kHz(), &clocks).split();
+let (mut ch1, mut ch2) = pwm;
+
+let max_duty = ch1.get_max_duty();
+ch1.set_duty(max_duty / 2);
+ch1.enable();
+
+let max_duty = ch2.get_max_duty();
+ch2.set_duty(max_duty / 4);
+ch2.enable();
+----
+
+An immediate problem is the lack of conveniently-mapped pins on the DISCO board. For the advanced motor control timers 1 or 8, we need all six PWM channels to be accessible. The STM32F7 DISCO board is very heavily utilised, so finding appropriate an appropriate pin configuration will be a challenge.
+
+
+
+
+
+== Results
+
+== Conclusions
