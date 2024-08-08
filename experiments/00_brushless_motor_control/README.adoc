@@ -2,6 +2,18 @@
 
 This experiment is intended to establish whether PWM from general-purpose timers can control multiple BLDC motors. The results should decide whether it is feasible to perform all the motor control logic in a single MCU such as the STM32H747, which only has 2 advanced motor control timers, but has 10 general purpose timers. The advantages of using a single MCU is board simplicity, lower cost, and lower programming and flashing complexity. The disadvantage is any specific deficiencies with using general timers for three-phase PWM, and CPU conflict/contention running multiple motors on one CPU (this seems unlikely given how "slow" the motor control is, but it is worth checking).
 
+== Theory/Simulation
+
+The T-Motor P1604 3800KV motor used in this experiment is a three-phase motor. A clear diagram of the configuration of this type of motor is Figure 1 in xref:../references/appnote-brushless-dc-motor-control.pdf[this Microchip application note]. Each opposite pair of windings is arranged in series, and is wired to the adjacent pairs in such a way that when current flows in one phase and out the other, the rotor is statically held in between the two pairs of windings.
+
+The simplest method to drive the motor is to sequentially excite pairs of phases to progress the rotor around each of the 6 static positions. Provided that the commutation is slow enough, the motor will remain in lock with the commutation (treating the BLDC like a stepper motor). This is referred to as "open loop control" in the application note. It will be used to test the basic order of PWM drive signals.
+
+We will begin with very low voltage (i.e. low duty cycle) and investigate the lowest voltage that can support this open-loop driving method. We will then raise the RPM until the motor is unable to keep up with the open loop method (after this point, sensorless control will be required).
+
+
+
+
+
 == Method
 
 The intention is create simple breadboard-based hardware to drive the T-Motor P1604 3800KV motor. The electrical design of the motor driver can be optimised later; the main intention of this experiment is to test the feasibility of the software.
