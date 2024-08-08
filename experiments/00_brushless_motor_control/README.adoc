@@ -28,6 +28,8 @@ TODO: add a picture of the wiring.
 
 We will use this opportunity to try using Rust for something non-trivial with the STM32F7 series.
 
+==== Getting basic PWM working
+
 Although it is not clearly stated on the summary page of the STM32F746 datasheet, this MCU does have advanced control timers (TIM1 and TIM8). These timers have four channels, each of which has a positive and a complement pin (used for the high and low side of a half-H bridge). Three of these channels are suitable to drive a three-phase brushless motor.
 
 A very quick test using the minimal project `pwm`, based on https://github.com/stm32-rs/stm32f7xx-hal/blob/main/examples/pwm.rs[this example], works on the STM32F746 DISCO board. The relevant lines to configure the PWM in Rust are:
@@ -85,7 +87,49 @@ The timer channels which are accessible on the headers are as follows:
 
 Luckily, there are six timers here (these exhaust all the timers on the Arduino pin headers), so there is a possibility of three-phase motor control if the peripherals can be synchronised appropriately.
 
+A snippet of the basic code required to turn on the channels is shown below:
 
+[,rust]
+----
+// How to turn on one channel on a timer
+// CN4, pin 4
+let channels = gpiob.pb4.into_alternate();
+let mut ch = dp.TIM3.pwm_hz(channels, 20.kHz(), &clocks).split();
+let max_duty = ch.get_max_duty();
+ch.set_duty(max_duty / 2);
+ch.enable();
+
+// How to turn on multiple channels in a timer
+let channels = (gpioh.ph6.into_alternate(), gpiob.pb15.into_alternate());
+let pwm = dp.TIM12.pwm_hz(channels, 20.kHz(), &clocks).split();
+let (mut ch1 , mut ch2) = pwm;
+
+// CN4, pin 7	
+let max_duty = ch1.get_max_duty();
+ch1.set_duty(max_duty / 4);
+ch1.enable();	
+
+// CN7, pin 4	
+let max_duty = ch2.get_max_duty();
+ch2.set_duty(max_duty / 7);
+ch2.enable();
+----
+
+NOTE: incorrectly using these functions will result in a compile error (i.e. getting the tuples wrong or forgetting to call `split`), but attempting to map an invalid pin (i.e. one without the correct alternate function) will also result in a very similar-looking compile error. Watch out for the latter case.
+
+This very simple exercise shows that naively enabling all the PWM channels produced PWM signals that are not synchronised (as expected). However, by moving all the enable signals into a block, the channels become very nearly synchronised:
+
+[,rush]
+----
+ch0.enable();
+ch1.enable();
+ch2.enable();	
+ch3.enable();
+ch4.enable();
+ch5.enable();
+----
+
+However, this synchronisation does not appear to survive optimisation (`cargo run --release`), and there is no guarantees on the synchronisation achieved like this.
 
 
 == Results
