@@ -81,8 +81,8 @@
 
 use panic_halt as _;
 
-use core::ptr;
 use core::fmt::Write;
+use core::ptr;
 
 use cortex_m_rt::{entry, exception, ExceptionFrame};
 use cortex_m_semihosting::hio;

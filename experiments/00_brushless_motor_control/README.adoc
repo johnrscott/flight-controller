@@ -4,15 +4,11 @@ This experiment is intended to establish whether PWM from general-purpose timers
 
 == Theory/Simulation
 
-The T-Motor P1604 3800KV motor used in this experiment is a three-phase motor. A clear diagram of the configuration of this type of motor is Figure 1 in xref:../references/appnote-brushless-dc-motor-control.pdf[this Microchip application note]. Each opposite pair of windings is arranged in series, and is wired to the adjacent pairs in such a way that when current flows in one phase and out the other, the rotor is statically held in between the two pairs of windings.
+The T-Motor P1604 3800KV motor used in this experiment is a three-phase motor. A clear diagram of the configuration of this type of motor is Figure 1 in xref:../../references/appnote-brushless-dc-motor-control.pdf[this Microchip application note]. Each opposite pair of windings is arranged in series, and is wired to the adjacent pairs in such a way that when current flows in one phase and out the other, the rotor is statically held in between the two pairs of windings.
 
 The simplest method to drive the motor is to sequentially excite pairs of phases to progress the rotor around each of the 6 static positions. Provided that the commutation is slow enough, the motor will remain in lock with the commutation (treating the BLDC like a stepper motor). This is referred to as "open loop control" in the application note. It will be used to test the basic order of PWM drive signals.
 
 We will begin with very low voltage (i.e. low duty cycle) and investigate the lowest voltage that can support this open-loop driving method. We will then raise the RPM until the motor is unable to keep up with the open loop method (after this point, sensorless control will be required).
-
-
-
-
 
 == Method
 
