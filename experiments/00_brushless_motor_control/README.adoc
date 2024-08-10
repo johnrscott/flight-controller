@@ -31,7 +31,7 @@ The following is the list of components required for the hardware setup:
 * 6 x STP36NF06L MOSFETs
 
 .Schematic for the open-loop motor driver experiment
-image::diagrmas/schematic_simple_driver.png[]
+image::diagrams/schematic_simple_driver.png[]
 
 NOTES on schematic
 
