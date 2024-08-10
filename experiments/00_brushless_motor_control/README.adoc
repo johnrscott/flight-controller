@@ -30,10 +30,10 @@ The following is the list of components required for the hardware setup:
 * 3 x IR2109PBF half-bridge driver
 * 6 x STP36NF06L MOSFETs
 
-.Schematic for the open-loop motor driver experiment
-image::diagrams/schematic_simple_driver.png[width=50%,align="center"]
+The schematic diagram for the open-loop driver (i.e. no sensorless feedback) using these components is shown below.
 
-NOTES on schematic
+.Schematic for the open-loop motor driver experiment
+image::diagrams/schematic_simple_driver.png[width=50%]
 
 The IR2109 is a half-bridge gate driver which takes a single input (IN) and uses it to control both the half-bridge MOSFETS. (Another pin SD is used to disable both MOSFETs at once.) The gate drive voltage for both high- and low-side MOSFETs is determined by the logic level. The maximum threshold voltage for the STP36NF06L is 2.5V, so the gate driver will be able to run from a logic voltage of 3.3V (on the high side, the drop across the diode will produce a gate drive voltage of 2.6V, assuming 0.7V across the 1N4148).
 

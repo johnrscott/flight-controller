@@ -13,6 +13,7 @@ use stm32f7xx_hal::{
     timer::{PwmChannel, C1, C2, C4},
 };
 
+/*
 struct ThreePhasePwm {
     ch1: PwmChannel<TIM3, { C1 }>,  // PB4, pin 4 CN4
     ch2: PwmChannel<TIM5, { C4 }>,  // PI0, pin 6 CN4
@@ -83,6 +84,8 @@ impl ThreePhasePwm {
         }
     }
 }
+*/
+
 
 #[entry]
 fn main() -> ! {
@@ -90,9 +93,144 @@ fn main() -> ! {
         // Set up the system clock.
         let rcc = dp.RCC.constrain();
         let clocks = rcc.cfgr.freeze();
+	
+        let gpioa = dp.GPIOA.split();
+        let gpiob = dp.GPIOB.split();
+        let gpioh = dp.GPIOH.split();
+        let gpioi = dp.GPIOI.split();
 
-        //let tim1_channels = (gpioa.pa8.into_alternate(),);
-        //let tim2_channels = (gpioa.pa15.into_alternate(),);
+        // CN4, pin 4 -- enable_1
+	let mut enable_1 = gpiob.pb4.into_push_pull_output();
+	enable_1.set_high();
+
+        // CN4, pin 7 -- enable_2
+	let mut enable_2 = gpioh.ph6.into_push_pull_output();
+	enable_2.set_high();
+
+        // CN7, pin 3 -- enable_3
+	let mut enable_3 = gpioa.pa8.into_push_pull_output();
+	enable_3.set_low();
+	
+        // CN4, pin 6 -- high_side_1
+        let channels = gpioi.pi0.into_alternate();
+        let mut high_side_1 = dp.TIM5.pwm_hz(channels, 20.kHz(), &clocks).split();
+        let max_duty = high_side_1.get_max_duty();
+        high_side_1.set_duty(max_duty / 2);
+	high_side_1.enable();
+
+        // CN7, pin 2 -- high_side_2
+        let channels = gpioa.pa15.into_alternate();
+        let mut high_side_2 = dp.TIM2.pwm_hz(channels, 20.kHz(), &clocks).split();
+        let max_duty = high_side_2.get_max_duty();
+        high_side_2.set_duty(0);
+	high_side_2.enable();
+
+        // CN7, pin 4 -- high_side_3
+	let channels = gpiob.pb15.into_alternate();
+        let mut high_side_3 = dp.TIM12.pwm_hz(channels, 20.kHz(), &clocks).split();
+        let max_duty = high_side_3.get_max_duty();
+        high_side_3.set_duty(max_duty / 7);
+	high_side_3.enable();
+
+        // Enable as a block to synchronise channels
+        // ch0.enable();
+        // ch1.enable();
+        // ch2.enable();
+        // ch3.enable();
+        // ch4.enable();
+        // ch5.enable();
+
+	loop {
+
+	    let N = 1000;
+
+	    let max_duty_1 = high_side_1.get_max_duty();
+	    let max_duty_2 = high_side_2.get_max_duty();
+	    let max_duty_3 = high_side_3.get_max_duty();
+
+	    let num = 15;
+	    let denom = 20;
+	    
+	    let duty_1 = num * max_duty_1 / denom;
+	    let duty_2 = num * max_duty_2 / denom;
+	    let duty_3 = num * max_duty_3 / denom;
+	    
+	    // In line 1, out line 2
+	    enable_1.set_high();
+	    enable_2.set_high();
+	    enable_3.set_low();
+	    high_side_1.set_duty(duty_1);
+	    high_side_2.set_duty(0);
+	    high_side_3.set_duty(0);
+
+	    for _ in 0..N {
+		cortex_m::asm::nop();
+            }
+	    
+	    // In line 3, out line 2
+	    enable_1.set_low();
+	    enable_2.set_high();
+	    enable_3.set_high();
+	    high_side_1.set_duty(0);
+	    high_side_2.set_duty(0);
+	    high_side_3.set_duty(duty_3);
+
+	    for _ in 0..N {
+		cortex_m::asm::nop();
+            }	    
+
+	    // In line 3, out line 1
+	    enable_1.set_high();
+	    enable_2.set_low();
+	    enable_3.set_high();
+	    high_side_1.set_duty(0);
+	    high_side_2.set_duty(0);
+	    high_side_3.set_duty(duty_3);
+
+	    for _ in 0..N {
+		cortex_m::asm::nop();
+            }	    
+
+	    // In line 2, out line 1
+	    enable_1.set_high();
+	    enable_2.set_high();
+	    enable_3.set_low();
+	    high_side_1.set_duty(0);
+	    high_side_2.set_duty(duty_2);
+	    high_side_3.set_duty(0);
+
+	    for _ in 0..N {
+		cortex_m::asm::nop();
+            }	    
+
+	    // In line 2, out line 3
+	    enable_1.set_low();
+	    enable_2.set_high();
+	    enable_3.set_high();
+	    high_side_1.set_duty(0);
+	    high_side_2.set_duty(duty_2);
+	    high_side_3.set_duty(0);
+
+	    for _ in 0..N {
+		cortex_m::asm::nop();
+            }	    
+
+	    // In line 1, out line 3
+	    enable_1.set_high();
+	    enable_2.set_low();
+	    enable_3.set_high();
+	    high_side_1.set_duty(duty_1);
+	    high_side_2.set_duty(0);
+	    high_side_3.set_duty(0);
+
+	    for _ in 0..N {
+		cortex_m::asm::nop();
+            }	    
+
+	    
+	    
+	}
+
     }
 
     loop {
