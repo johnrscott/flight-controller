@@ -15,6 +15,12 @@ This project is a development board intended for flight algorithm design. The ov
 * ➕ A range of peripherals such as I2C/SPI/UART for expansion modules.
 * 🚁 Future versions to plug into fixed-wing and helicopter remote control vehicles.
 
+The working block diagram for the project is shown below:
+
+.Block diagram for the system
+image::diagrams/block_diagram_v0.1.png[]
+
+
 = "User requirements"/Purpose
 
 The purpose is to provide a platform for experimenting with algorithms for take-off, landing, and stabilising (initially) quadcopters. Later, the board should be sufficiently flexible to either expand to other flight form factors or investigate more complex algorithms. However, due to the range of different form factors for flying vehicles, we will not explicitly design this functionality in the first version -- just keep an eye on the bigger picture.
