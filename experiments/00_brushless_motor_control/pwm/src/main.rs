@@ -109,8 +109,8 @@ fn main() -> ! {
         let mut enable_2 = gpioh.ph6.into_push_pull_output();
         enable_2.set_high();
 
-        // CN7, pin 3 -- enable_3
-        let mut enable_3 = gpioa.pa8.into_push_pull_output();
+        // CN7, pin 1 -- enable_3
+        let mut enable_3 = gpioi.pi2.into_push_pull_output();
         enable_3.set_low();
 
         // CN4, pin 6 -- high_side_1
@@ -125,13 +125,11 @@ fn main() -> ! {
         high_side_2.set_duty(1);
         high_side_2.enable();
 
-        // CN7, pin 4 -- high_side_3
-        let channels = gpiob.pb15.into_alternate();
-        let mut high_side_3 = dp.TIM12.pwm_hz(channels, 20.kHz(), &clocks).split();
+        // CN7, pin 3 -- high_side_3
+        let channels = gpioa.pa8.into_alternate();
+        let mut high_side_3 = dp.TIM1.pwm_hz(channels, 20.kHz(), &clocks).split();
         high_side_3.set_duty(1);
         high_side_3.enable();
-
-	loop {}
 
         // Enable as a block to synchronise channels
         // ch0.enable();
@@ -146,21 +144,21 @@ fn main() -> ! {
 
         let max_duty_1 = high_side_1.get_max_duty();
         let max_duty_2 = high_side_2.get_max_duty();
-        //let max_duty_3 = high_side_3.get_max_duty();
+        let max_duty_3 = high_side_3.get_max_duty();
 
         // Fastest speed we achieved is 3 ms per commutation,
 	// with num = 6 (sets the voltage). There are 42
 	// commutations in one mechanical rotation, so that
 	// works out as 126 ms per mechanical rotation,
 	// or 476 RPM.
-        let num = 10;
+        let num = 6;
         let denom = 20;
 
         let duty_1 = num * max_duty_1 / denom;
         let duty_2 = num * max_duty_2 / denom;
-        //let duty_3 = num * max_duty_3 / denom;
+        let duty_3 = num * max_duty_3 / denom;
 
-        let comm_delay: u32 = 500; // milliseconds
+        let comm_delay: u32 = 3; // milliseconds
 
         loop {
 
@@ -170,7 +168,7 @@ fn main() -> ! {
             enable_3.set_low();
             high_side_1.set_duty(duty_1);
             high_side_2.set_duty(0);
-            //high_side_3.set_duty(0);
+            high_side_3.set_duty(0);
 
             delay.delay_ms(comm_delay);
 
@@ -180,7 +178,7 @@ fn main() -> ! {
             enable_3.set_high();
             high_side_1.set_duty(0);
             high_side_2.set_duty(0);
-            //high_side_3.set_duty(duty_3);
+            high_side_3.set_duty(duty_3);
 
             delay.delay_ms(comm_delay);
 
@@ -190,7 +188,7 @@ fn main() -> ! {
             enable_3.set_high();
             high_side_1.set_duty(0);
             high_side_2.set_duty(0);
-            //high_side_3.set_duty(duty_3);
+            high_side_3.set_duty(duty_3);
 
             delay.delay_ms(comm_delay);
 
@@ -200,7 +198,7 @@ fn main() -> ! {
             enable_3.set_low();
             high_side_1.set_duty(0);
             high_side_2.set_duty(duty_2);
-            //high_side_3.set_duty(0);
+            high_side_3.set_duty(0);
 
             delay.delay_ms(comm_delay);
 
@@ -210,7 +208,7 @@ fn main() -> ! {
             enable_3.set_high();
             high_side_1.set_duty(0);
             high_side_2.set_duty(duty_2);
-            //high_side_3.set_duty(0);
+            high_side_3.set_duty(0);
 
             delay.delay_ms(comm_delay);
 
@@ -220,7 +218,7 @@ fn main() -> ! {
             enable_3.set_high();
             high_side_1.set_duty(duty_1);
             high_side_2.set_duty(0);
-            //high_side_3.set_duty(0);
+            high_side_3.set_duty(0);
 
             delay.delay_ms(comm_delay);
         }
