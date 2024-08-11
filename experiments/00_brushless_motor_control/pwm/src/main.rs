@@ -116,23 +116,22 @@ fn main() -> ! {
         // CN4, pin 6 -- high_side_1
         let channels = gpioi.pi0.into_alternate();
         let mut high_side_1 = dp.TIM5.pwm_hz(channels, 20.kHz(), &clocks).split();
-        let max_duty = high_side_1.get_max_duty();
-        high_side_1.set_duty(max_duty / 2);
+        high_side_1.set_duty(1);
         high_side_1.enable();
 
         // CN7, pin 2 -- high_side_2
         let channels = gpioa.pa15.into_alternate();
         let mut high_side_2 = dp.TIM2.pwm_hz(channels, 20.kHz(), &clocks).split();
-        let max_duty = high_side_2.get_max_duty();
-        high_side_2.set_duty(0);
+        high_side_2.set_duty(1);
         high_side_2.enable();
 
         // CN7, pin 4 -- high_side_3
         let channels = gpiob.pb15.into_alternate();
         let mut high_side_3 = dp.TIM12.pwm_hz(channels, 20.kHz(), &clocks).split();
-        let max_duty = high_side_3.get_max_duty();
-        high_side_3.set_duty(max_duty / 7);
+        high_side_3.set_duty(1);
         high_side_3.enable();
+
+	loop {}
 
         // Enable as a block to synchronise channels
         // ch0.enable();
@@ -147,38 +146,41 @@ fn main() -> ! {
 
         let max_duty_1 = high_side_1.get_max_duty();
         let max_duty_2 = high_side_2.get_max_duty();
-        let max_duty_3 = high_side_3.get_max_duty();
+        //let max_duty_3 = high_side_3.get_max_duty();
 
         // Fastest speed we achieved is 3 ms per commutation,
 	// with num = 6 (sets the voltage). There are 42
 	// commutations in one mechanical rotation, so that
 	// works out as 126 ms per mechanical rotation,
 	// or 476 RPM.
-        let num = 6;
+        let num = 10;
         let denom = 20;
 
         let duty_1 = num * max_duty_1 / denom;
         let duty_2 = num * max_duty_2 / denom;
-        let duty_3 = num * max_duty_3 / denom;
+        //let duty_3 = num * max_duty_3 / denom;
 
-        // In line 1, out line 2
-        enable_1.set_high();
-        enable_2.set_high();
-        enable_3.set_low();
-        high_side_1.set_duty(duty_1);
-        high_side_2.set_duty(0);
-        high_side_3.set_duty(0);
-
-        let comm_delay: u32 = 3; // milliseconds
+        let comm_delay: u32 = 500; // milliseconds
 
         loop {
-            // In line 3, out line 2
+
+	    // In line 1, out line 2
+            enable_1.set_high();
+            enable_2.set_high();
+            enable_3.set_low();
+            high_side_1.set_duty(duty_1);
+            high_side_2.set_duty(0);
+            //high_side_3.set_duty(0);
+
+            delay.delay_ms(comm_delay);
+
+	    // In line 3, out line 2
             enable_1.set_low();
             enable_2.set_high();
             enable_3.set_high();
             high_side_1.set_duty(0);
             high_side_2.set_duty(0);
-            high_side_3.set_duty(duty_3);
+            //high_side_3.set_duty(duty_3);
 
             delay.delay_ms(comm_delay);
 
@@ -188,7 +190,7 @@ fn main() -> ! {
             enable_3.set_high();
             high_side_1.set_duty(0);
             high_side_2.set_duty(0);
-            high_side_3.set_duty(duty_3);
+            //high_side_3.set_duty(duty_3);
 
             delay.delay_ms(comm_delay);
 
@@ -198,7 +200,7 @@ fn main() -> ! {
             enable_3.set_low();
             high_side_1.set_duty(0);
             high_side_2.set_duty(duty_2);
-            high_side_3.set_duty(0);
+            //high_side_3.set_duty(0);
 
             delay.delay_ms(comm_delay);
 
@@ -208,7 +210,7 @@ fn main() -> ! {
             enable_3.set_high();
             high_side_1.set_duty(0);
             high_side_2.set_duty(duty_2);
-            high_side_3.set_duty(0);
+            //high_side_3.set_duty(0);
 
             delay.delay_ms(comm_delay);
 
@@ -218,7 +220,7 @@ fn main() -> ! {
             enable_3.set_high();
             high_side_1.set_duty(duty_1);
             high_side_2.set_duty(0);
-            high_side_3.set_duty(0);
+            //high_side_3.set_duty(0);
 
             delay.delay_ms(comm_delay);
         }
