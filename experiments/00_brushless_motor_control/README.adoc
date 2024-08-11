@@ -2,43 +2,52 @@
 
 This experiment is intended to establish whether PWM from general-purpose timers can control multiple BLDC motors. The results should decide whether it is feasible to perform all the motor control logic in a single MCU such as the STM32H747, which only has 2 advanced motor control timers, but has 10 general purpose timers. The advantages of using a single MCU is board simplicity, lower cost, and lower programming and flashing complexity. The disadvantage is any specific deficiencies with using general timers for three-phase PWM, and CPU conflict/contention running multiple motors on one CPU (this seems unlikely given how "slow" the motor control is, but it is worth checking).
 
-== Theory/Simulation
-
-The T-Motor P1604 3800KV motor used in this experiment is a three-phase motor. A clear diagram of the configuration of this type of motor is Figure 1 in xref:../../references/appnote-brushless-dc-motor-control.pdf[this Microchip application note]. Each opposite pair of windings is arranged in series, and is wired to the adjacent pairs in such a way that when current flows in one phase and out the other, the rotor is statically held in between the two pairs of windings.
-
-The simplest method to drive the motor is to sequentially excite pairs of phases to progress the rotor around each of the 6 static positions. Provided that the commutation is slow enough, the motor will remain in lock with the commutation (treating the BLDC like a stepper motor). This is referred to as "open loop control" in the application note. It will be used to test the basic order of PWM drive signals.
-
-We will begin with very low voltage (i.e. low duty cycle) and investigate the lowest voltage that can support this open-loop driving method. We will then raise the RPM until the motor is unable to keep up with the open loop method (after this point, sensorless control will be required).
-
 == Method
 
 The intention is create simple breadboard-based hardware to drive the T-Motor P1604 3800KV motor. The electrical design of the motor driver can be optimised later; the main intention of this experiment is to test the feasibility of the software.
 
+The reference for the theory of BLDC motor control is xref:../../reference/appnote-brushless-dc-motor-control.pdf[this Microchip application note], which contains simple explanations of the basic commutation sequence in Figure 1, and describes open-loop control.
+
 === Hardware setup
 
-Using the https://www.st.com/en/evaluation-tools/32f746gdiscovery.html[STM32F746-DISCO] board (because I have that lying around), following the design used in the https://www.st.com/en/evaluation-tools/b-g431b-esc1.html[B-G431B-ESC1] evaluation board.
-
-This evaluation board uses the L638E high voltage high/low-side driver, up to 600V, \~ 50ns rise/fall with 1nF load, \~ 0.5A gate drive source/sink. Will replace with similar part IR2109PBF, which has a lower drive strength and slower switching time, but the through-hole version is available. Lower performance will produce a better lower bound on requirements if it works.
-
-The evaluation board uses STL180N6F7 N-channel 60V, 1.9mOhm, 120A MOSFETs. We will replace with STP36NF06L, with reduced current to 30A (this is what is used in the reference Toothpick AIO design). It has an input capacitance of 600pF.
+Using the https://www.st.com/en/evaluation-tools/32f746gdiscovery.html[STM32F746-DISCO] board (because I have that lying around) and using xref:../../reference/datasheet-l298.pdf[L298N] dual full-bridge drivers (because I have these in stock).
 
 The following is the list of components required for the hardware setup:
 
 * 1 x T-Motor P1604 3800KV motor (mounted in AOS 3.5 V5 Freestyle Quadcopter Frame for this experiment)
 * 1 x STM32F746 DISCO board
 * 1 x breadboard
-* 3 x IR2109PBF half-bridge driver
-* 6 x STP36NF06L MOSFETs
+* 2 x L298N dual full-bridge drivers
+* 4 x 100nF capacitors
+* 6 x LEDs
+* 6 x 100k resistors
 
-The schematic diagram for the open-loop driver (i.e. no sensorless feedback) using these components is shown below.
+The breadboard layout for the experiment is shown below 
 
-.Schematic for the open-loop motor driver experiment
-image::diagrams/schematic_simple_driver.png[width=50%]
+.Breadboard layout for the experiment
+image::breadboard.jpg[]
 
-The IR2109 is a half-bridge gate driver which takes a single input (IN) and uses it to control both the half-bridge MOSFETS. (Another pin SD is used to disable both MOSFETs at once.) The gate drive voltage for both high- and low-side MOSFETs is determined by the logic level. The maximum threshold voltage for the STP36NF06L is 2.5V, so the gate driver will be able to run from a logic voltage of 3.3V (on the high side, the drop across the diode will produce a gate drive voltage of 2.6V, assuming 0.7V across the 1N4148).
+The design uses one half bridge out of three of the full bridges present across the two L298N chips. Each one of these half bridges drives one phase of the BLDC motor.
 
-Taking the maximum output current of the half-bridge driver as 120mA, and assuming a gate drive voltage of 3.3V, the minimum required gate series resistor is 3.3V/120mA = 27.5ohm. A large series resistor will slow down the gate turn-on/turn-off times.
+Each half bridge driving a phase must be able to drive the phase high, drive it low, and set it floating. To drive it high or low, the corresponding full bridge `ENA`/`ENB` signal must be asserted, and the input `IN1`/`IN3` must be set to high or low.
 
+To set the half bridge to floating, de-assert the `ENA`/`ENB` signal (`IN1`/`IN3` is don't-care).
+
+It is not possible to use the two half bridges from one full bridge independently because `ENA` covers the whole full bridge, but separate control of the half bridges is required.
+
+NOTE: This type of scheme requires six signals: three floating/not-floating inputs, and three high/low inputs (applicable only when non-floating). The alternative scheme is to drive each MOSFET of the three half bridges separately, which still requires six signals. In summary, driving a BLDC requires 6 digital output pins.
+
+The breadboard layout follows the schematic diagram in the datasheet for the L298N. On the input side, an LED is connected to each `EN`/`IN` pin, which is useful to see the commutation signals easily.
+
+The logic signals are powered from the DISCO board at 3V3. The phase power supplies comes from a bench power supply (set to 12V, with a current limit at 2A).
+
+WARNING: The full bridge drivers can only supply a current of 4A, hence the 2A current limit.
+
+This setup does not use sensorless feedback, which involves reading the voltage on the floating signal. The objective here is just feasibility of driving the motors using timer PWM outputs, in open-loop mode.
+
+PWM signals are only needed for the `IN` signals. The `EN` signals can be regular GPIOs because each phase only needs to be floating or not floating during a commutation step.
+
+NOTE: When using the alternative scheme of driving each MOSFET in the three half bridges separately, you still only need three PWM signals, attached to the high-side MOSFETs. This is because the low-side MOSFETs are only used to decide which phases are floating, and which are sinking (and it is not necessary to apply PWM to both the line input and neutral output phases). 
 
 === Software setup
 
@@ -131,23 +140,124 @@ ch2.set_duty(max_duty / 7);
 ch2.enable();
 ----
 
-NOTE: incorrectly using these functions will result in a compile error (i.e. getting the tuples wrong or forgetting to call `split`), but attempting to map an invalid pin (i.e. one without the correct alternate function) will also result in a very similar-looking compile error. Watch out for the latter case.
+To set up the required three PWM signals and three GPIO signals, the following code snippet can be used:
 
-This very simple exercise shows that naively enabling all the PWM channels produced PWM signals that are not synchronised (as expected). However, by moving all the enable signals into a block, the channels become very nearly synchronised:
-
-[,rush]
+[,rust]
 ----
-ch0.enable();
-ch1.enable();
-ch2.enable();	
-ch3.enable();
-ch4.enable();
-ch5.enable();
+// CN4, pin 4 -- enable_1
+let mut enable_1 = gpiob.pb4.into_push_pull_output();
+enable_1.set_high();
+
+// CN4, pin 7 -- enable_2
+let mut enable_2 = gpioh.ph6.into_push_pull_output();
+enable_2.set_high();
+
+// CN7, pin 1 -- enable_3
+let mut enable_3 = gpioi.pi2.into_push_pull_output();
+enable_3.set_low();
+
+// CN4, pin 6 -- high_side_1
+let channels = gpioi.pi0.into_alternate();
+let mut high_side_1 = dp.TIM5.pwm_hz(channels, 20.kHz(), &clocks).split();
+high_side_1.set_duty(1);
+high_side_1.enable();
+
+// CN7, pin 2 -- high_side_2
+let channels = gpioa.pa15.into_alternate();
+let mut high_side_2 = dp.TIM2.pwm_hz(channels, 20.kHz(), &clocks).split();
+high_side_2.set_duty(1);
+high_side_2.enable();
+
+// CN7, pin 3 -- high_side_3
+let channels = gpioa.pa8.into_alternate();
+let mut high_side_3 = dp.TIM1.pwm_hz(channels, 20.kHz(), &clocks).split();
+high_side_3.set_duty(1);
+high_side_3.enable();
 ----
 
-However, this synchronisation does not appear to survive optimisation (`cargo run --release`), and there is no guarantees on the synchronisation achieved like this.
+The commutation steps are performed as follows:
 
+[,rust]
+----
+loop {
+
+    // In line 1, out line 2
+    enable_1.set_high();
+    enable_2.set_high();
+    enable_3.set_low();
+    high_side_1.set_duty(duty_1);
+    high_side_2.set_duty(0);
+    high_side_3.set_duty(0);
+
+    delay.delay_ms(comm_delay);
+
+    // In line 3, out line 2
+    enable_1.set_low();
+    enable_2.set_high();
+    enable_3.set_high();
+    high_side_1.set_duty(0);
+    high_side_2.set_duty(0);
+    high_side_3.set_duty(duty_3);
+
+    delay.delay_ms(comm_delay);
+
+    // In line 3, out line 1
+    enable_1.set_high();
+    enable_2.set_low();
+    enable_3.set_high();
+    high_side_1.set_duty(0);
+    high_side_2.set_duty(0);
+    high_side_3.set_duty(duty_3);
+
+    delay.delay_ms(comm_delay);
+
+    // In line 2, out line 1
+    enable_1.set_high();
+    enable_2.set_high();
+    enable_3.set_low();
+    high_side_1.set_duty(0);
+    high_side_2.set_duty(duty_2);
+    high_side_3.set_duty(0);
+
+    delay.delay_ms(comm_delay);
+
+    // In line 2, out line 3
+    enable_1.set_low();
+    enable_2.set_high();
+    enable_3.set_high();
+    high_side_1.set_duty(0);
+    high_side_2.set_duty(duty_2);
+    high_side_3.set_duty(0);
+
+    delay.delay_ms(comm_delay);
+
+    // In line 1, out line 3
+    enable_1.set_high();
+    enable_2.set_low();
+    enable_3.set_high();
+    high_side_1.set_duty(duty_1);
+    high_side_2.set_duty(0);
+    high_side_3.set_duty(0);
+
+    delay.delay_ms(comm_delay);
+}
+----
 
 == Results
 
+Using the code in `pwm/`, it is possible to drive the BLDC motor in open-loop mode at 3 ms per commutation step. For the 14N12P motor configuration, which has 7 electrical revolutions per mechanical revolution (so there are 42 commutations in one mechanical rotation), this implies 126 ms per mechanical rotation, or 476 RPM.
+
+To run the code, plug in the DISCO board, install the toolchain as described in the `pwm/README.md`, and run:
+
+[,bash]
+----
+cargo run
+----
+
+The experiment shows it is feasible to realise basic open-loop control a BLDC motor using generic PWM/timer modules in the STM32F746 series devices, and it is not necessary to use advanced motor control timers. Although the experiment is performed in open-loop mode at low speed, it is likely that regular timers along with analog to digital converters can be combined to realise sensorless feedback control for BLDC motors.
+
 == Conclusions
+
+There will not be a bottleneck due to PWM/timer modules when driving four BLDC motors. Six digital output channels (three PWM and three GPIO) are required per motor, so 24 pins in total. According to the xref:../../reference/appnote-brushless-dc-motor-control.pdf[Microchip application note], only a single ADC is required for motor, so four ADC channels are required in total.
+
+It is highly likely that the STM32H7 series devices contain enough timers, ADCs, and processing speed, to handle the motor driving algorithms in the Cortex M4 core.
