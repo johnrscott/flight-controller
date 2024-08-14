@@ -20,7 +20,6 @@ The working block diagram for the project is shown below:
 .Block diagram for the system
 image::diagrams/block_diagram_v0.1.png[]
 
-
 = "User requirements"/Purpose
 
 The purpose is to provide a platform for experimenting with algorithms for take-off, landing, and stabilising (initially) quadcopters. Later, the board should be sufficiently flexible to either expand to other flight form factors or investigate more complex algorithms. However, due to the range of different form factors for flying vehicles, we will not explicitly design this functionality in the first version -- just keep an eye on the bigger picture.
@@ -58,9 +57,25 @@ For reference, the electronics used in this design (to be replaced by this proje
 * https://www.hobbyrc.co.uk/hdzero-whoop-lite-bundle[HDZero Whoop Lite Bundle]. This includes the camera, VTX (video transmitted), and antenna.
 * https://www.radiomasterrc.com/products/rp2-expresslrs-2-4ghz-nano-receiver[RP2 V2 ExpressLRS 2.4ghz Nano Receiver].
 
-= Overall Architecture
+= Architecture Components
 
-This design combines the responsibilities normally assigned to separate flight controller board, an electronic speed controller, and a power supply board. The intention is that the result is easy to use and can form the basis for a simple quadcopter design.
+This section contains an overview of the options for each of the subsystem components (e.g. sensors, MCU, motors, etc.)
+
+== Motion, Direction and Altitude Sensors
+
+A range of sensors measure motion and location for the purposes of using in flight control algorithms. Requirements for sensor chips include availability for PCBA and at parts suppliers, documentation, and connection to both I2C and SPI (to keep interface options open), and ideally reference to drone applications.
+
+Translational and rotational acceleration are measured using an accelerometer and gyroscope. An example chip containing both functionality is the https://www.bosch-sensortec.com/products/motion-sensors/imus/bmi270/[BMI270], which is used in the https://betafpv.com/products/toothpick-f405-2-4s-aio-brushless-flight-controller-20a-blheli_32-v4[Toothpick F405 2-4S AIO]. It has 16-bit accelerometer and 3-axis gyroscope measurements, and connects via SPI or I2C.
+
+Altitude is measured by measuring absolute atmospheric pressure. A suitable sensor is the https://www.bosch-sensortec.com/products/environmental-sensors/pressure-sensors/bmp388/[BMP388], with a pressure range 300hPa to 1250hPa. (One atmosphere is 1013 hPa at sea level, and about 950 hPa at 500 ft.) Although this part is not recommended for new designs (it is replaced by the https://www.bosch-sensortec.com/products/environmental-sensors/pressure-sensors/bmp390/[BMP390]), the BMP388 is significantly cheaper and more available on JLCPCB PCBA, so is worth considering as a design option in the immediate term, with a view to migrating later. Both SPI and I2C are supported.
+
+The https://www.bosch-sensortec.com/products/motion-sensors/magnetometers/bmm150/[BMM150] is a magnetic sensor that functions as a 3-axis compass. Similarly to above, it has been superseded by the https://www.bosch-sensortec.com/products/motion-sensors/magnetometers/bmm350/[BMM350], but that part is not yet available on JLCPCB. Both SPI and I2C are supported.
+
+A chip support all sensors in one package is the https://www.st.com/en/mems-and-sensors/lsm9ds1.html[LSM9DS1] (also marked as obsolete, but is available from JLCPCB for PCBA). The function is similar to the chips listed above, however, the part is marked as no longer manufactured from Farnell, and therefore will not be considered.
+
+== GPS
+
+The umbrella term for GPS is GNSS (global navigation satellite system), and this terminology is often used on receiver modules. 
 
 == Main MCU
 
