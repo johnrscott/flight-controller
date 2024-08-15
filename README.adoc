@@ -38,6 +38,15 @@ There should be support WiFi and Bluetooth connectivity for basic control, and s
 
 SPI/I2C/UART and general GPIO connections should be available for interfacing additional modules to the flight controller later, to make the platform adaptable as requirements change.
 
+== Planned Prototypes
+
+The board will be developed in two stages:
+
+* *Rev 1.0* will contain the MCU, FPGA, motion/direction/altitude sensors, motor control, power management, and WiFi/Bluetooth. The primary purpose of this development board is to provide a platform to begin work on the core motion control algorithms in a "ground-testing" stage, where long-range remote control is not required. Wireless short-range control will be achieved using either WiFi or Bluetooth, which may also include streaming video off the device.
+* *Rev 2.0* will add on the long-range radio components of the design, including GPS sensing, receiving remote control, transmitting telemetry and video (VTX).
+
+The rationale for splitting the development into these two versions is to get a board focusing on motion control up and running quickly, without requiring that all the radio elements are designed simultaneously. Once the core flight controller mechanism is working, this will form a concrete basis for specifying the radio requirements of the board. Radio-related components can then be handled together so that compatibility of multiple radios, interference, range, etc. can be assessed.
+
 = Quadcopter Design
 
 The quadcopter design used as the basis for the flight controller design is described here. The design is based on the methodology outlined in https://www.youtube.com/watch?v=tCouTFibtPc[this video]. Swapped out the frame due to availability.
