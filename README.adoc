@@ -38,14 +38,18 @@ There should be support WiFi and Bluetooth connectivity for basic control, and s
 
 SPI/I2C/UART and general GPIO connections should be available for interfacing additional modules to the flight controller later, to make the platform adaptable as requirements change.
 
-== Planned Prototypes
+== Planned Revisions
 
 The board will be developed in two stages:
 
-* *Rev 1.0* will contain the MCU, FPGA, motion/direction/altitude sensors, motor control, power management, and WiFi/Bluetooth. The primary purpose of this development board is to provide a platform to begin work on the core motion control algorithms in a "ground-testing" stage, where long-range remote control is not required. Wireless short-range control will be achieved using either WiFi or Bluetooth, which may also include streaming video off the device.
-* *Rev 2.0* will add on the long-range radio components of the design, including GPS sensing, receiving remote control, transmitting telemetry and video (VTX).
+* *Rev 0.0* will contain the MCU, FPGA, motion/direction/altitude sensors, motor control, power management, and WiFi/Bluetooth. The primary purpose of this development board is to provide a platform to begin work on the core motion control algorithms in a "ground-testing" stage, where long-range remote control is not required. Wireless short-range control will be achieved using either WiFi or Bluetooth, which may also include streaming video off the device.
+* *Rev 0.1* will add on the long-range radio components of the design, including GPS sensing, receiving remote control, transmitting telemetry and video (VTX). It will also incorporate any changes required based on experiments with Rev 0.0.
+* *Rev 1.0* will be the first version of the board, incorporating changes required based on experiments with Rev 0.1.
 
 The rationale for splitting the development into these two versions is to get a board focusing on motion control up and running quickly, without requiring that all the radio elements are designed simultaneously. Once the core flight controller mechanism is working, this will form a concrete basis for specifying the radio requirements of the board. Radio-related components can then be handled together so that compatibility of multiple radios, interference, range, etc. can be assessed.
+
+
+
 
 = Quadcopter Design
 
