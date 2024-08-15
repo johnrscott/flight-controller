@@ -1,0 +1,3 @@
+= Embedded Rust Basics Example Project
+
+This folder contains a simple demo of embedded Rust using the STM32F746 DISCO board.

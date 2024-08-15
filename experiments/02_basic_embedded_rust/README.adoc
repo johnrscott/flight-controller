@@ -1,0 +1,133 @@
+= Basic Embedded Rust
+
+Started: 15/07/2024
+Finished: 
+
+This experiment is about getting the basics working with Rust and the STM32F746 microcontroller on the DISCO board. We want to check that everything we want to do is easily possible:
+
+* Compile and run
+* Debug using a serial console
+* Debug using breakpoints and a debugger
+* Working with basic input/output
+* Work with timers and interrupts
+* Work with peripherals exposed through a HAL
+* Work with peripherals that do not have a HAL library
+
+If possible, we also want to find some options for RTOS or similar frameworks for structuring large or complicated programs with multiple concurrent tasks.
+
+This page contains the notes relating to the points above. Most of the material is based on the https://docs.rust-embedded.org/book/[Embedded Rust Book], and links to other resources are provided as they are needed.
+
+== Setting up the Toolchain
+
+WARNING: These instructions were written on a computer that had many of the tools already installed. Need to come back to this with a fresh Ubuntu instance and tidy up the instructions.
+
+Make sure Rust is installed first. Then run (these steps are explained in detail in the embedded Rust book):
+
+[,bash]
+----
+# Cortex M7 with hardware floating point
+# Adjust as required
+rustup target add thumbv7em-none-eabihf
+
+# Install LLVM-specific binutils (objdump, etc.)
+cargo install cargo-binutils
+rustup component add llvm-tools
+
+# Install some Qemu tools and OpenOCD (a debugger)
+sudo apt install gdb-arm-none-eabi openocd qemu-system-arm
+----
+
+To test OpenOCD, run:
+
+[,bash]
+----
+# Plug in the STM32F746 DISCO board first
+openocd -f interface/stlink.cfg -f target/stm32f7x.cfg
+----
+
+You should see a string of `Info` lines including something similar to: `Info : stm32f7x.cpu: hardware has 8 breakpoints, 4 watchpoints`. 
+
+== Creating a New Project
+
+The simplest way to create a new project for Cortex M series devices is to run:
+
+[,bash]
+----
+cargo generate --git https://github.com/rust-embedded/cortex-m-quickstart
+# When prompted, give the project a name (we chose "basics" in this folder)
+----
+
+Go into the folder and edit `Cargo.toml` and edit the details are required.
+
+Open the `.cargo/config.toml` file and uncomment the correct line matching the target architecture of the STM32F746:
+
+[,toml]
+----
+[build]
+# Pick ONE of these default compilation targets
+# target = "thumbv6m-none-eabi"        # Cortex-M0 and Cortex-M0+
+# target = "thumbv7m-none-eabi"        # Cortex-M3
+# target = "thumbv7em-none-eabi"       # Cortex-M4 and Cortex-M7 (no FPU)
+target = "thumbv7em-none-eabihf"     # Cortex-M4F and Cortex-M7F (with FPU)
+# target = "thumbv8m.base-none-eabi"   # Cortex-M23
+# target = "thumbv8m.main-none-eabi"   # Cortex-M33 (no FPU)
+# target = "thumbv8m.main-none-eabihf" # Cortex-M33 (with FPU)
+----
+
+== Running on Qemu
+
+To run a binary on Qemu, first compile it. For example, to compile the `hello` example, run
+
+[,bash]
+----
+cargo build --example hello
+----
+
+To run it with Qemu, run:
+
+[,bash]
+----
+# Modify the -kernel argument to point to the binary to run.
+# Take care that the -machine argument is an architecture that
+# matches the one you compiled for (i.e. mps2-an500 is a Cortex-M7
+# machine).
+qemu-system-arm \
+  -cpu cortex-m7 \
+  -machine mps2-an500 \
+  -nographic \
+  -semihosting-config enable=on,target=native \
+  -kernel target/thumbv7em-none-eabihf/debug/examples/hello
+----
+
+If it is successful, it should print `Hello, world!`. The source code is in `examples/hello.rs`.
+
+Documentation for the ARM machines was obtained from https://www.qemu.org/docs/master/system/arm/mps2.html[here].
+
+== Inspecting Compiled Code
+
+This is a list of useful tips for looking at compiled code using cargo binutils.
+
+To view the headers of the compiled executable for the project `basics`, run
+
+[,bash]
+----
+# from the folder containing Cargo.toml
+# Replace `basics` with project name
+cargo readobj --bin basics -- --file-headers
+----
+
+Use `cargo size` to inspect the size of the sections in the executable, which reflects the size of the object that will be loaded onto the device:
+
+[,bash]
+----
+# Replace `basics` with project name
+cargo size --bin basics --release -- -A
+----
+
+To disassemble the binary, run:
+
+[,bash]
+----
+# Replace `basics` with your project name
+cargo objdump --bin basics --release -- --disassemble --no-show-raw-insn --print-imm-hex
+----
