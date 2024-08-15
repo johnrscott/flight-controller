@@ -65,19 +65,19 @@ fn main() -> ! {
         let max_duty_2 = high_side_2.get_max_duty();
         let max_duty_3 = high_side_3.get_max_duty();
 
-        // Fastest speed we achieved is 3 ms per commutation,
-	// with num = 6 (sets the voltage). There are 42
+        // Fastest speed we achieved is 1 ms per commutation,
+	// with num = 11 (sets the voltage). There are 42
 	// commutations in one mechanical rotation, so that
-	// works out as 126 ms per mechanical rotation,
-	// or 476 RPM.
-        let num = 6;
+	// works out as 42 ms per mechanical rotation,
+	// or 1426 RPM.
+        let num = 11;
         let denom = 20;
 
         let duty_1 = num * max_duty_1 / denom;
         let duty_2 = num * max_duty_2 / denom;
         let duty_3 = num * max_duty_3 / denom;
 
-        let comm_delay: u32 = 3; // milliseconds
+        let comm_delay: u32 = 1; // milliseconds
 
         loop {
 
