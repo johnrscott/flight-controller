@@ -220,7 +220,16 @@ A more advanced version of this script is generated as part of the template, in 
 gdb-multiarch -x openocd.gdb target/thumbv7em-none-eabihf/debug/examples/hello
 ----
 
+== Using ITM (Serial Wire Viewer)
 
+ARM devices support a one-wire serial debug port via the SWO pin. An example is contained in the `examples/itm.rs` file.
+
+
+
+[,bash]
+----
+cargo install itm
+----
 
 == Inspecting Compiled Code
 
