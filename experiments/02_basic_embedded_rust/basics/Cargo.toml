@@ -6,13 +6,16 @@ name = "basics"
 version = "0.1.0"
 
 [dependencies]
-cortex-m = "0.6.0"
+alloc-cortex-m = "0.4.4"
+cortex-m = "0.7.7"
 cortex-m-rt = "0.6.10"
 cortex-m-semihosting = "0.3.3"
 panic-halt = "0.2.0"
+panic-itm = "0.4.2"
+panic-semihosting = "0.6.0"
 
 [dependencies.stm32f7xx-hal]
-version = "0.7.0"
+version = "0.8.0"
 features = ["stm32f746", "rt"]
 
 # Uncomment for the panic example.

@@ -17,6 +17,15 @@ If possible, we also want to find some options for RTOS or similar frameworks fo
 
 This page contains the notes relating to the points above. Most of the material is based on the https://docs.rust-embedded.org/book/[Embedded Rust Book], and links to other resources are provided as they are needed.
 
+== Getting Started
+
+This section contains the order I did things. To follow along and run all the examples, you need the STM32F746 Discovery board. Everything was tested on Linux Mint 21.1 Cinnamon.
+
+. To get started, read the first few sections of the https://docs.rust-embedded.org/book/[Embedded Rust Book]. Notes on <<_setting_up_the_toolchain>>, <<_creating_a_new_project>>, <<_debugging>>, and <<_running_on_hardware>> are given below. These follow the Rust Embedded Book, and that should be used as the proper reference.
+. Before starting to program the STM32F7 device seriously, get printing using semi-hosting and ITM working (which is the same as the Serial Wire Viewer, if you are familiar with the STM32CubeIDE). The <<_running_on_hardware>> section contains an example using semi hosting (which is convenient but slow), and the section <<_using_itm_serial_wire_viewer>> contains information on setting up ITM debugging. Also, try out the different panic handlers; once semi-hosting and ITM are working, it should be as simple as replacing one use statement at the top of the file.
+. I found a combination of the Embedded Rust Book and https://dev.to/theembeddedrustacean/stm32f4-embedded-rust-at-the-hal-gpio-interrupts-e5[this blog series] a good starting point for embedded programming using the HAL. The blog targets STM32F4, but is easily converted to STM32F7.
+.. See the `basics/examples/button_led.rs` file for a basic example showing GPIO/delay usage. It is based on https://blog.theembeddedrustacean.com/stm32f4-embedded-rust-at-the-hal-gpio-button-controlled-blinking[this blog post].
+
 == Setting up the Toolchain
 
 WARNING: These instructions were written on a computer that had many of the tools already installed. Need to come back to this with a fresh Ubuntu instance and tidy up the instructions.
@@ -224,12 +233,50 @@ gdb-multiarch -x openocd.gdb target/thumbv7em-none-eabihf/debug/examples/hello
 
 ARM devices support a one-wire serial debug port via the SWO pin. An example is contained in the `examples/itm.rs` file.
 
-
+To set up `openocd.gdb` to use ITM, ensure the following two lines are present:
 
 [,bash]
 ----
-cargo install itm
+# Ensure that the clock frequency here matches the
+# system clock frequency configured in Rust
+monitor tpiu config internal itm.txt uart off 80000000
+monitor itm port 0 on
 ----
+
+A minimal rust program to print to ITM is shown below:
+
+[,rust]
+----
+#![no_std]
+#![no_main]
+use panic_halt as _;
+use cortex_m::iprintln;
+use cortex_m_rt::entry;
+use stm32f7xx_hal as hal;
+use stm32f7xx_hal::prelude::*;
+
+#[entry]
+fn main() -> ! {
+    if let Some(dp) = hal::pac::Peripherals::take() {
+        let rcc = dp.RCC.constrain();
+	// Set the system clock frequency as below
+	rcc.cfgr.sysclk(80_000_000.Hz()).freeze();
+    }
+    if let Some(mut cp) = cortex_m::peripheral::Peripherals::take() {
+	let stim = &mut cp.ITM.stim[0];
+	iprintln!(stim, "Hello World ITM!");
+    }
+    loop {}
+}
+----
+
+Run the program by starting `openocd` (from the root crate directory) and then running `cargo run` (make sure cargo run is set up to run `gdb-multiarch -x openocd.gdb` first). After running the example (type `continue` in gdb), a file called `itm.txt` will be created, where ITM messages will be dumped. You can 
+
+To read it, install `itmdump` using `cargo install itm`. Then run `itmdump -f itm.txt` to view the messages.
+
+If the file is not present, check the `openocd.gdb` configuration is correct. If the file is present but empty, looks corrupt, or fails to parse using `itmdump`, double check that the clock frequency of the microcontroller matches the lines in `openocd.gdb`.
+
+NOTE: You can use ITM and semi-hosting at the same time. You can also print panic messages over ITM using `use panic_itm as _`.
 
 == Inspecting Compiled Code
 
@@ -259,3 +306,28 @@ To disassemble the binary, run:
 # Replace `basics` with your project name
 cargo objdump --bin basics --release -- --disassemble --no-show-raw-insn --print-imm-hex
 ----
+
+== General Rust Notes
+
+This section contains a set of miscellaneous notes relating to Rust code/projects that may be helpful.
+
+=== Dependency version issues
+
+Dependencies are declared in `Cargo.toml` with version numbers, but problems can arise when you declare a crate dependency, and so does one of the other crates you are using. This can produce compilation issues due to mismatched types or traits, and can be hard to debug
+
+For example, suppose the `stm32f7xx-hal` crate v0.7 is used, and so is the `cortex-m` crate v0.6.0. This produces an inconsistency, because the `stm32f7xx-hal` crate uses `cortex-m` v0.7.7 internally. This produces the error `the trait Nr is not implemented for `stm32f7xx_hal::interrupt``, on the following code:
+
+[,rust]
+----
+unsafe {
+    cortex_m::peripheral::NVIC::unmask(Interrupt::TIM2);
+}
+----
+
+NOTE: This specific problem is documented https://dev.to/theembeddedrustacean/stm32f4-embedded-rust-at-the-hal-gpio-interrupts-e5[here]. 
+
+To fix the problem, ensure that crate version are consistent. You can use `cargo tree` to view the crate versions used in your project. The issue can arise if you copy and pasted code into your `Cargo.toml` from old source (with out-of-date crate versions), or you have updated one crate without updating others.
+
+You can also avoid the problem by using the version of the crate exposed by your other dependency, and not declaring it as a dependency yourself. For example, you can access `cortex-m` through the `stm32f7xx-hal` crate.
+
+When I had this problem, I fixed it by changing `stm32f7xx-hal` to v0.8.0, and changing `cortex-m` to v0.7.7 (both the latest versions).
