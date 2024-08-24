@@ -359,6 +359,22 @@ The application should now build using `cargo build`. You can flash and run it (
 DEFMT_LOG=info cargo rb minimal
 ----
 
+Throughout the code, logging is achieved by `defmt` macros such as `defmt::info!("Hello, World!")`. How this is formatted on the host side is  documented https://defmt.ferrous-systems.com/custom-log-output[here], which lists format specifiers. These are passed to `probe-rs` (see https://defmt.ferrous-systems.com/custom-log-output#passing-log-format-to-printers[this section]), which is achieved by updating the `.config/cargo.toml`.
+
+[,toml]
+----
+runner = [
+       "probe-rs",
+       "run",
+       "--chip",
+       "STM32F746NGHx",
+       "--log-format",
+       # This line prints the timestamp, followed by the
+       # log type and the message itself
+       "{t} {L} {s}"
+]
+----
+
 Read through https://rtic.rs/2/book/en/by-example.html[the RTIC by Example documentation] for getting started information on how to use the framework.
 
 Using the framework revolves around defining tasks tied to interrupts. Two tasks are always present, the `init` task and the `idle` task. The `init` task sets up the software system (clock configuration, interrupt configuration, etc.), and starts software tasks. The `idle` task runs when other tasks are not running.
@@ -429,7 +445,6 @@ mod app {
 
 }
 ----
-
 
 == General Rust Notes
 

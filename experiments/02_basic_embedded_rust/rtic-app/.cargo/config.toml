@@ -1,6 +1,14 @@
 [target.'cfg(all(target_arch = "arm", target_os = "none"))']
-# TODO(2) replace `$CHIP` with your chip's name (see `probe-rs chip list` output)
-runner = "probe-rs run --chip STM32F746NGHx"
+runner = [
+       "probe-rs",
+       "run",
+       "--chip",
+       "STM32F746NGHx",
+       "--log-format",
+       # This line prints the timestamp, followed by the
+       # log type and the message itself.
+       "{t} {L} {s}"
+]
 rustflags = [
   "-C", "linker=flip-link",
   "-C", "link-arg=-Tlink.x",
