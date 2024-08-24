@@ -23,8 +23,8 @@ This section contains the order I did things. To follow along and run all the ex
 
 . To get started, read the first few sections of the https://docs.rust-embedded.org/book/[Embedded Rust Book]. Notes on <<_setting_up_the_toolchain>>, <<_creating_a_new_project>>, <<_debugging>>, and <<_running_on_hardware>> are given below. These follow the Rust Embedded Book, and that should be used as the proper reference.
 . Before starting to program the STM32F7 device seriously, get printing using semi-hosting and ITM working (which is the same as the Serial Wire Viewer, if you are familiar with the STM32CubeIDE). The <<_running_on_hardware>> section contains an example using semi hosting (which is convenient but slow), and the section <<_using_itm_serial_wire_viewer>> contains information on setting up ITM debugging. Also, try out the different panic handlers; once semi-hosting and ITM are working, it should be as simple as replacing one use statement at the top of the file.
-. I found a combination of the Embedded Rust Book and https://dev.to/theembeddedrustacean/stm32f4-embedded-rust-at-the-hal-gpio-interrupts-e5[this blog series] a good starting point for embedded programming using the HAL. The blog targets STM32F4, but is easily converted to STM32F7.
-.. See the `basics/examples/button_led.rs` file for a basic example showing GPIO/delay usage. It is based on https://blog.theembeddedrustacean.com/stm32f4-embedded-rust-at-the-hal-gpio-button-controlled-blinking[this blog post].
+. I found a combination of the Embedded Rust Book and https://dev.to/theembeddedrustacean/stm32f4-embedded-rust-at-the-hal-gpio-interrupts-e5[this blog series] a good starting point for embedded programming using the HAL. The blog targets STM32F4, but is easily converted to STM32F7. See the `basics/examples/button_led.rs` file for a basic example showing GPIO/delay usage. It is based on https://blog.theembeddedrustacean.com/stm32f4-embedded-rust-at-the-hal-gpio-button-controlled-blinking[this blog post].
+. There are two main frameworks available for structuring embedded applications in Rust: https://rtic.rs/2/book/en/preface.html[RTIC] (previously known as RTFM) and https://embassy.dev/[Embassy]. Basic experiments with RTIC are described in <<_using_rtic>>
 
 == Setting up the Toolchain
 
@@ -306,6 +306,60 @@ To disassemble the binary, run:
 # Replace `basics` with your project name
 cargo objdump --bin basics --release -- --disassemble --no-show-raw-insn --print-imm-hex
 ----
+
+== Using RTIC
+
+https://rtic.rs/2/book/en/preface.html[RTIC] is an embedded software for structuring real-time applications made of multiple tasks. It is quite similar to an RTOS, but is oriented towards using the interrupt controller and interrupt priorities to hardware-schedule tasks, rather than having a software scheduler controlling threads.
+
+This section follows the basic getting started guide https://rtic.rs/2/book/en/starting_a_project.html[here], which is based on the template https://github.com/rtic-rs/defmt-app-template[defmt-app-template].
+
+To prepare, install some dependencies. This template uses https://probe.rs/[probe-rs], which is a replacement for the OpenOCD+gdb combination for flashing and running code on the hardware. https://github.com/knurling-rs/flip-link[Flip link] is a library for moving the stack to the bottom of the memory map to catch stack overflows safely.
+
+[,bash]
+----
+# From the probe-rs main web page
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/probe-rs/probe-rs/releases/latest/download/probe-rs-tools-installer.sh | sh
+
+# Install flip-link
+cargo install flip-link
+----
+
+Next, clone the template repository into your own directory:
+
+[,bash]
+----
+git clone https://github.com/rtic-rs/app-template rtic-app
+----
+
+NOTE: If you are cloning this into your own git repository to use as part of your project, ensure you delete the `.git` folder to avoid any conflicts with your own repository. Similarly, consider deleting the `.gitignore`.
+
+Now follow the instructions outlined in the https://github.com/rtic-rs/defmt-app-template[repo], briefly summarised here:
+
+. Set the runner to `probe-rs run --chip STM32F746NGHx` in `.cargo/config.toml`
+. Set the target to `"thumbv7em-none-eabihf"` in `.cargo/config.toml`
+. If not done already, ensure the toolchain is installed: `rustup +nightly target add thumbv7em-none-eabihf`
+. Set the correct RTIC backend: `rtic = { version = "2.0.0", features = [ "thumbv7-backend" ] }`
+. Add the HAL into `Cargo.toml`:
++
+[,toml]
+----
+[dependencies.stm32f7xx-hal]
+version = "0.8.0"
+features = ["stm32f746", "rt"]
+----
+. Import the HAL into the `rtic-app/src/lib.rs`: `use stm32f7xx_hal as _;`.
+. Set the HAL and list of free interrupts in the `rtic::app` macro in `rtic-app/src/bin/minimal.rs`: `#[rtic::app(device = stm32f7xx_hal::pac, dispatchers = [TIM2])]`. See the list of STM32F7xx interrupts in the `stm32f7xx-hal::pac::Interrupt` enum https://docs.rs/stm32f7xx-hal/latest/stm32f7xx_hal/pac/enum.Interrupt.html[here]. These interrupts are associated to software tasks in the application.
+
+The application should now build using `cargo build`. You can flash and run it (after connecting the DISCO board) by running:
+
+[,bash]
+----
+# Add the DEFMT_LOG definition to show info messages.
+# By default, defmt only shows error messages
+DEFMT_LOG=info cargo rb minimal
+----
+
+
 
 == General Rust Notes
 
