@@ -4,8 +4,11 @@
 
 use test_app as _; // global logger + panicking-behavior + memory layout
 
-#[rtic::app(device = stm32f7xx_hal::pac, dispatchers = [TIM2])]
+#[rtic::app(device = stm32f7xx_hal::pac, dispatchers = [])]
 mod app {
+
+    use stm32f7xx_hal::pac::Interrupt;
+
     // Shared resources go here
     #[shared]
     struct Shared {
@@ -27,8 +30,8 @@ mod app {
         // let token = rtic_monotonics::create_systick_token!();
         // rtic_monotonics::systick::Systick::new(cx.core.SYST, sysclk, token);
 
-
-        task1::spawn().ok();
+        //task1::spawn().ok();
+	rtic::pend(Interrupt::TIM2);
 
         (
             Shared {
@@ -50,9 +53,9 @@ mod app {
         }
     }
 
-    // TODO: Add tasks
-    #[task(priority = 1)]
-    async fn task1(_cx: task1::Context) {
+    // A hardware interrupt is just like a regular ISR
+    #[task(binds = TIM2, priority = 1)]
+    fn task1(_cx: task1::Context) {
         defmt::info!("Hello from task1!");
     }
 }

@@ -359,6 +359,76 @@ The application should now build using `cargo build`. You can flash and run it (
 DEFMT_LOG=info cargo rb minimal
 ----
 
+Read through https://rtic.rs/2/book/en/by-example.html[the RTIC by Example documentation] for getting started information on how to use the framework.
+
+Using the framework revolves around defining tasks tied to interrupts. Two tasks are always present, the `init` task and the `idle` task. The `init` task sets up the software system (clock configuration, interrupt configuration, etc.), and starts software tasks. The `idle` task runs when other tasks are not running.
+
+All tasks in RTIC are tied to interrupts, but "software tasks" are not tied to the specific functionality of the interrupt. These tasks use any free interrupts that are not used for anything else in the program (these are listed in the `dispatchers` list in the `rtic::app` macro). Software tasks are spawned in the `init` task with a line like this: `task1::spawn().ok()`, and are declared like this:
+
+[,rust]
+----
+// Software tasks are automatically mapped to interrupts listed
+// in the dispatchers argument. These are interrupts you are not
+// using for their actual hardware functionality.
+#[rtic::app(device = stm32f7xx_hal::pac, dispatchers = [TIM2])]
+mod app {
+
+...
+
+       // Start the software task in the `init`
+       // task as follows.
+       task1::spawn().ok();
+       ...
+    }
+
+
+    // A software task has no binds argument in the task macro,
+    // and is declared as async.
+    #[task(priority = 1)]
+    async fn task1(_cx: task1::Context) {
+        defmt::info!("Hello from task1!");
+    }
+
+}
+----
+
+The `defmt-app-template` example `minimal.rs` uses a software task. Software tasks use `async`, are intended to be spawned once and run indefinitely (although they can `await`), do not have any explicit `binds` argument in the `task` macro, and must have a free (i.e. unused) interrupt listed in the `dispatchers`. Think of them as providing similar functionality to a thread in a normal RTOS. Read more about software threads in the https://rtic.rs/2/book/en/by-example/software_tasks.html[official RTIC documentation].
+
+NOTE: Make sure that the interrupts being used for software tasks do not have side-effects, or other special purposes, and are not related to peripherals you need to use for their real functionality.
+
+The software task in `minimal.rs` can be converted to a hardware task, which is a task specifically intended to run as an interrupt service routine (ISR). As described in the https://rtic.rs/2/book/en/by-example/hardware_tasks.html[documentation], this is intended to run to completion (it is not `async`, so no `await` statements), but it can be preempted. Use hardware tasks to respond to true peripheral interrupts, similarly to the use of an ISR in a regular RTOS.
+
+To convert the software task to a hardware task, modify the code as follows:
+
+[,rust]
+----
+// Make sure you remove any interrupts being used as hardware tasks
+// (ISRs) from the dispatchers list.
+#[rtic::app(device = stm32f7xx_hal::pac, dispatchers = [])]
+mod app {
+
+...
+
+       // You can manually trigger a hardware interrupt as follows,
+       // but more likely, you would configure the peripheral
+       // responsible for the interrupt and let it trigger in
+       // response to whatever event it is linked to.
+       rtic::pend(Interrupt::TIM2);
+
+       ...
+    }
+
+
+    // A hardware interrupt is just like a regular ISR. Specify the
+    // interrupt using the binds argument, and remove the async
+    // keyword (hardware tasks cannot await).
+    #[task(binds = TIM2, priority = 1)]
+    fn task1(_cx: task1::Context) {
+        defmt::info!("Hello from task1!");
+    }
+
+}
+----
 
 
 == General Rust Notes
