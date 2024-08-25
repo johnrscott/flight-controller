@@ -3,6 +3,21 @@
 version = 3
 
 [[package]]
+name = "app-lib"
+version = "0.1.0"
+dependencies = [
+ "cortex-m",
+ "defmt",
+ "defmt-brtt",
+ "embedded-io",
+ "noline",
+ "panic-probe",
+ "rtic",
+ "rtic-monotonics",
+ "stm32f7xx-hal",
+]
+
+[[package]]
 name = "as-slice"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -583,21 +598,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
-]
-
-[[package]]
-name = "test-app"
-version = "0.1.0"
-dependencies = [
- "cortex-m",
- "defmt",
- "defmt-brtt",
- "embedded-io",
- "noline",
- "panic-probe",
- "rtic",
- "rtic-monotonics",
- "stm32f7xx-hal",
 ]
 
 [[package]]
