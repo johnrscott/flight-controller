@@ -9,7 +9,9 @@ mod app {
 
     const CLOCK_FREQ: u32 = 216_000_000;
     
-    use hal::rcc::{self, HSEClock, Clocks};
+    use hal::pac::USART1;
+    use hal::rcc::{self, HSEClock};
+    use hal::serial::{self, Serial};
     use stm32f7xx_hal as hal;
     use stm32f7xx_hal::prelude::*;
 
@@ -22,7 +24,10 @@ mod app {
     }
 
     #[local]
-    struct Local {}
+    struct Local {
+	tx: serial::Tx<USART1>,
+	rx: serial::Rx<USART1>,
+    }
 
     #[init]
     fn init(cx: init::Context) -> (Shared, Local) {
@@ -39,13 +44,32 @@ mod app {
         // and 216 MHz (the program will panic if out of range).
         let hse_cfg = HSEClock::new(25_000_000.Hz(), rcc::HSEClockMode::Bypass);
         let rcc = device.RCC.constrain();
-        let _clocks = rcc.cfgr.hse(hse_cfg).sysclk(CLOCK_FREQ.Hz()).freeze();
-	
-        hello_slow_loop::spawn().ok();
-        hello_fast_loop::spawn().ok();
+        let clocks = rcc.cfgr.hse(hse_cfg).sysclk(CLOCK_FREQ.Hz()).freeze();
 
+	let gpioa = device.GPIOA.split();
+	let gpiob = device.GPIOB.split();
 	
-        (Shared {}, Local {})
+	let tx = gpioa.pa9.into_alternate();
+	let rx = gpiob.pb7.into_alternate();
+
+	let mut serial = Serial::new(
+            device.USART1,
+            (tx, rx),
+            &clocks,
+            serial::Config {
+		// Default to 115_200 bauds
+		..Default::default()
+            },
+	);
+
+	// Listen for a received character
+	serial.listen(serial::Event::Rxne);
+
+	let (tx, rx) = serial.split();
+	
+        hello_loop::spawn().ok();
+	
+        (Shared {}, Local { tx, rx })
     }
 
     // Optional idle, can be removed if not needed.
@@ -57,20 +81,16 @@ mod app {
     }
     
     #[task(priority = 1)]
-    async fn hello_slow_loop(_cx: hello_slow_loop::Context) {
+    async fn hello_loop(_cx: hello_loop::Context) {
 	loop {
 	    Mono::delay(1.secs()).await;
 	    defmt::info!("Hello every 1s!");
 	}
     }
-
-    #[task(priority = 1)]
-    async fn hello_fast_loop(_cx: hello_fast_loop::Context) {
-	loop {
-	    Mono::delay(5.secs()).await;
-	    defmt::info!("Hello every 5s!");
-	}
-    }
-
     
+    #[task(binds = USART1, priority = 1, local=[tx, rx])]
+    fn serial_task(cx: serial_task::Context) {
+        let received = cx.local.rx.read().unwrap_or('E' as u8);
+        cx.local.tx.write(received).ok();
+    }    
 }

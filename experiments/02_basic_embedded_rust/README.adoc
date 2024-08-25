@@ -377,6 +377,8 @@ runner = [
 
 Read through https://rtic.rs/2/book/en/by-example.html[the RTIC by Example documentation] for getting started information on how to use the framework.
 
+=== Basics of tasks
+
 Using the framework revolves around defining tasks tied to interrupts. Two tasks are always present, the `init` task and the `idle` task. The `init` task sets up the software system (clock configuration, interrupt configuration, etc.), and starts software tasks. The `idle` task runs when other tasks are not running.
 
 All tasks in RTIC are tied to interrupts, but "software tasks" are not tied to the specific functionality of the interrupt. These tasks use any free interrupts that are not used for anything else in the program (these are listed in the `dispatchers` list in the `rtic::app` macro). Software tasks are spawned in the `init` task with a line like this: `task1::spawn().ok()`, and are declared like this:
@@ -445,6 +447,79 @@ mod app {
 
 }
 ----
+
+=== DISCO Board Serial (USART1)
+
+The STM32F746 DISCO board does not have many buttons, so taking commands via the ST-LINK v2 serial interface is a good way to add a lot of flexibility.
+
+NOTE: The built-in serial conenction via ST-LINK v2 is nothing to do with debugging, gdb, openocd, probe-rs, or the like. It is accessible via a regular Linux virtual terminal `/dev/ttyACM0` while the device is connected and the program is running.
+
+Referring to the DISCO board link:../../reference/schematic-stm32f746g-disco.pdf[schematic], the ST-LINK v2 virtual com port (`VCP-RX` and `VCP-TX`) is connected to `PB7` and `PA9`, which corresponds to `USART1` on the microcontroller.
+
+To configure the peripheral, using the following code in the `init` task, after setting up clocks:
+
+[,rust]
+----
+let gpioa = device.GPIOA.split();
+let gpiob = device.GPIOB.split();
+
+let tx = gpioa.pa9.into_alternate();
+let rx = gpiob.pb7.into_alternate();
+
+let mut serial = Serial::new(
+    device.USART1,
+    (tx, rx),
+    &clocks,
+    serial::Config {
+	// Default to 115_200 bauds
+	..Default::default()
+    },
+);
+
+// Listen for a received character. Make sure you write an RTIC
+// hardware task that binds to the `USART1` interrupt.
+serial.listen(serial::Event::Rxne);
+
+let (tx, rx) = serial.split();
+
+...
+
+// At the end, return the rx and tx as local resources
+(Shared {}, Local { tx, rx })
+----
+
+This configures the HAL serial interface, and then makes the `Rx<USART1>` and `Tx<USART1>` variables that can be stored in the local struct:
+
+[,rust]
+----
+#[local]
+struct Local {
+    tx: serial::Tx<USART1>,
+    rx: serial::Rx<USART1>,
+}
+----
+
+Finally, add a hardware task for the USART1 interrupt:
+
+[,rust]
+----
+// This task echos received characters back to the host
+#[task(binds = USART1, priority = 1, local=[tx, rx])]
+fn serial_task(cx: serial_task::Context) {
+    let received = cx.local.rx.read().unwrap_or('E' as u8);
+    cx.local.tx.write(received).ok();
+}
+----
+
+On the Linux side, the STM32F746 DISCO board ST-LINK v2 is exposed as the device `/dev/ttyACM0`. You can connect to it by running `sudo apt install cu`, and then:
+
+[,bash]
+----
+# Before running this, connect the DISCO board and run `cargo rb minimal`
+cu -l /dev/ttyACM0 -s 115200
+----
+
+To exit, type `~.`. 
 
 == General Rust Notes
 
