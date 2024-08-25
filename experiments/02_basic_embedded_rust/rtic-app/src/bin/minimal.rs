@@ -60,7 +60,6 @@ mod app {
 		    match self.rx.read() {
 			Ok(ch) => {			    
 			    buf[0] = ch;
-			    defmt::info!("Read: {}", ch);
 			    // Once a char is received, just return it
 			    return Ok(1);
 			},
@@ -82,9 +81,7 @@ mod app {
 		    // serial write call does not block if a character
 		    // is currently being transmitted; it returns without
 		    // sending anything. Keep retrying until ch is sent.
-		    //while let Err(_) = self.tx.write(*ch) {};
-		    
-		    defmt::info!("write: {}", *ch);
+		    while let Err(_) = self.tx.write(*ch) {};
 		    sent_counter += 1;
 		}
 		Ok(sent_counter)
