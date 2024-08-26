@@ -14,13 +14,13 @@ pub const SYSTICK_RATE_HZ: u32 = 1000;
 #[rtic::app(device = stm32f7xx_hal::pac, dispatchers = [EXTI0, EXTI1, EXTI2])]
 mod app {
 
-    use crate::uart_serial::SerialWrapper;
-    use noline::sync_io::IO;
+    use crate::uart_serial::SerialTx;
     use rtic_monotonics::systick::prelude::*;
     use stm32f7xx_hal::gpio::{Output, PinState, PI1};
-    use stm32f7xx_hal::pac::{ADC3, TIM2};
+    use stm32f7xx_hal::pac::{ADC3, TIM2, USART1};
     use stm32f7xx_hal::timer;
     use stm32f7xx_hal::timer::CounterUs;
+    use stm32f7xx_hal::serial::Rx;
 
     use crate::adc::adc_task;
     use crate::init::init;
@@ -35,7 +35,8 @@ mod app {
     #[local]
     pub struct Local {
         pub green_led: PI1<Output>,
-        pub io: IO<SerialWrapper>,
+        pub serial_tx: SerialTx,
+        pub serial_rx: Rx<USART1>,
         pub counter: CounterUs<TIM2>,
         pub adc: ADC3,
     }
@@ -45,7 +46,7 @@ mod app {
         #[init]
         fn init(cx: init::Context) -> (Shared, Local);
 
-        #[task(priority = 1, local=[io])]
+        #[task(priority = 1, local=[serial_rx, serial_tx])]
         async fn serial_task(cx: serial_task::Context);
 
         #[task(priority = 3, local=[adc])]

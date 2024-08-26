@@ -10,8 +10,9 @@ defmt-brtt = { version = "0.1", default-features = false, features = ["rtt"] }
 panic-probe = { version = "0.3", features = ["print-defmt"] }
 rtic = { version = "2.0.0", features = [ "thumbv7-backend" ] }
 rtic-monotonics = { version = "2.0.2", features = [ "cortex-m-systick" ]}
-noline = { version = "0.3.0", default-features = false, features = ["sync"]}
+embedded-cli = "0.2.1"
 embedded-io = "0.6.1"
+ufmt = "0.2.0"
 
 [dependencies.stm32f7xx-hal]
 version = "0.8.0"

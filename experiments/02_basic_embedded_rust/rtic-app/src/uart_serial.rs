@@ -1,61 +1,49 @@
-//! A simple console implementation using Noline
-//!
-//! This module implements console-like access to the
-//! MCU program via USART1 on the DISCO board (over ST-LINK v2)
-//! using Noline, which is a Rust library similar to readline
-//! (for a prompt, command history, editing, etc.)
 //!
 //!
 
+use core::convert::Infallible;
+
 use crate::app::serial_task;
+use embedded_cli::cli::CliBuilder;
+use embedded_cli::Command;
 use embedded_io::{ErrorType, Read, Write};
 use hal::gpio::{PA9, PB7};
 use hal::rcc::Clocks;
 use hal::serial::{self, Rx, Serial, Tx};
-use noline::builder::EditorBuilder;
-use noline::error::NolineError;
-use noline::sync_io::IO;
 use stm32f7xx_hal as hal;
 use stm32f7xx_hal::pac::USART1;
 use stm32f7xx_hal::prelude::*;
+use ufmt::uwrite;
 
-pub struct SerialWrapper {
-    rx: Rx<USART1>,
+#[derive(Command)]
+enum Base<'a> {
+    /// Say hello to World or someone else
+    Hello {
+        /// To whom to say hello (World by default)
+        name: Option<&'a str>,
+    },
+
+    /// Stop CLI and exit
+    Exit,
+}
+
+pub struct SerialTx {
     tx: Tx<USART1>,
 }
 
-impl SerialWrapper {
-    pub fn new(rx: serial::Rx<USART1>, tx: serial::Tx<USART1>) -> Self {
-        Self { rx, tx }
+impl SerialTx {
+    pub fn new(tx: serial::Tx<USART1>) -> Self {
+        Self { tx }
     }
 }
 
-impl ErrorType for SerialWrapper {
-    type Error = NolineError;
+struct SerialError {}
+
+impl ErrorType for SerialTx {
+    type Error = Infallible;
 }
 
-impl Read for SerialWrapper {
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
-        // Really basic implementation, just one char at a time
-        if buf.len() == 0 {
-            Ok(0)
-        } else {
-            // This function blocks, so just wait for char
-            loop {
-                match self.rx.read() {
-                    Ok(ch) => {
-                        buf[0] = ch;
-                        // Once a char is received, just return it
-                        return Ok(1);
-                    }
-                    Err(_) => {}
-                }
-            }
-        }
-    }
-}
-
-impl Write for SerialWrapper {
+impl Write for SerialTx {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
         if buf.len() == 0 {
             Ok(0)
@@ -78,7 +66,12 @@ impl Write for SerialWrapper {
     }
 }
 
-pub fn init_uart_serial(usart1: USART1, rx: PB7, tx: PA9, clocks: &Clocks) -> IO<SerialWrapper> {
+pub fn init_uart_serial(
+    usart1: USART1,
+    rx: PB7,
+    tx: PA9,
+    clocks: &Clocks,
+) -> (Rx<USART1>, SerialTx) {
     let serial = Serial::new(
         usart1,
         (tx.into_alternate(), rx.into_alternate()),
@@ -88,36 +81,71 @@ pub fn init_uart_serial(usart1: USART1, rx: PB7, tx: PA9, clocks: &Clocks) -> IO
 
     let (tx, rx) = serial.split();
 
-    let wrapper = SerialWrapper::new(rx, tx);
-
-    IO::new(wrapper)
+    (rx, SerialTx::new(tx))
 }
 
 pub async fn serial_task(cx: serial_task::Context<'_>) {
     defmt::info!("Starting serial task");
-    let mut io = cx.local.io;
+    let rx = cx.local.serial_rx;
+    let tx = cx.local.serial_tx;
 
-    let mut fail_count = 0;
-    let mut editor = loop {
-        match EditorBuilder::new_static::<256>()
-            .with_static_history::<256>()
-            .build_sync(&mut io)
-        {
-            Ok(editor) => {
-                defmt::info!("Successfully configured serial prompt");
-                break editor;
-            }
-            Err(_) => {
-                defmt::warn!(
-                    "Failed to initialise serial prompt ({}). Re-trying",
-                    fail_count
-                );
-                fail_count += 1;
-            }
-        };
+    // create static buffers for use in cli (so we're not using stack memory)
+    // History buffer is 1 byte longer so max command fits in it (it requires
+    // extra byte at end)
+    // SAFETY: buffers are passed to cli and are used by cli only
+    let (command_buffer, history_buffer) = unsafe {
+        static mut COMMAND_BUFFER: [u8; 40] = [0; 40];
+        static mut HISTORY_BUFFER: [u8; 41] = [0; 41];
+        (COMMAND_BUFFER.as_mut(), HISTORY_BUFFER.as_mut())
     };
 
-    while let Ok(line) = editor.readline("MCU $ ", &mut io) {
-        defmt::info!("Received command: '{}'", line);
+    let mut cli = CliBuilder::default()
+        .writer(tx)
+        .command_buffer(command_buffer)
+        .history_buffer(history_buffer)
+        .build()
+        .unwrap();
+
+    let _ = cli.write(|writer| {
+        // storing big text in progmem
+        // for small text it's usually better to use normal &str literals
+        uwrite!(
+            writer,
+            "Cli is running.
+Type \"help\" for a list of commands.
+Use backspace and tab to remove chars and autocomplete.
+Use up and down for history navigation.
+Use left and right to move inside input."
+        )
+        .unwrap();
+        Ok(())
+    });
+
+    loop {
+        // Blocking loop waiting for character
+        let byte = loop {
+            if let Ok(ch) = rx.read() {
+                break ch;
+            }
+        };
+
+        let _ = cli.process_byte::<Base, _>(
+            byte,
+            &mut Base::processor(|cli, command| {
+                match command {
+                    Base::Hello { name } => {
+                        // last write in command callback may or may not
+                        // end with newline. so both uwrite!() and uwriteln!()
+                        // will give identical results
+                        uwrite!(cli.writer(), "Hello, {}", name.unwrap_or("World"))?;
+                    }
+                    Base::Exit => {
+                        // We can write via normal function if formatting not needed
+                        cli.writer().write_str("Cli can't shutdown now")?;
+                    }
+                }
+                Ok(())
+            }),
+        );
     }
 }

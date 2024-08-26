@@ -37,7 +37,7 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
     let clocks = rcc.cfgr.hse(hse_cfg).sysclk(CLOCK_FREQ_HZ.Hz()).freeze();
 
     // Set up the usart1 (stlink v2 serial)
-    let io = init_uart_serial(device.USART1, gpiob.pb7, gpioa.pa9, &clocks);
+    let (serial_rx, serial_tx) = init_uart_serial(device.USART1, gpiob.pb7, gpioa.pa9, &clocks);
 
     // PWM setup
     let pin = gpiob.pb4.into_alternate();
@@ -65,7 +65,8 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
     (
         Shared {},
         Local {
-            io,
+            serial_rx,
+            serial_tx,
             green_led,
             counter,
             adc,
