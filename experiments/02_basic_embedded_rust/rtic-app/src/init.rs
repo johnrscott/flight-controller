@@ -1,17 +1,16 @@
 use crate::uart_serial::init_uart_serial;
 use stm32f7xx_hal::rcc::{self, HSEClock};
 use stm32f7xx_hal::{prelude::*, timer};
-use stm32f7xx_hal::timer::{Timer, CounterUs};
 
 use crate::app::Mono;
 use crate::app::{init, Shared, Local};
 
-const CLOCK_FREQ: u32 = 216_000_000;
+use crate::CLOCK_FREQ_HZ;
 
 pub fn init(cx: init::Context) -> (Shared, Local) {
     defmt::info!("Starting RTIC init task");
 
-    Mono::start(cx.core.SYST, CLOCK_FREQ);
+    Mono::start(cx.core.SYST, CLOCK_FREQ_HZ);
 
     // Device specific peripherals
     let device = cx.device;
@@ -22,7 +21,7 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
     // and 216 MHz (the program will panic if out of range).
     let hse_cfg = HSEClock::new(25_000_000.Hz(), rcc::HSEClockMode::Bypass);
     let rcc = device.RCC.constrain();
-    let clocks = rcc.cfgr.hse(hse_cfg).sysclk(CLOCK_FREQ.Hz()).freeze();
+    let clocks = rcc.cfgr.hse(hse_cfg).sysclk(CLOCK_FREQ_HZ.Hz()).freeze();
 
     let gpioa = device.GPIOA.split();
     let gpiob = device.GPIOB.split();
@@ -32,7 +31,6 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
     let tx = gpioa.pa9.into_alternate();
     let usart1 = device.USART1;
     let io = init_uart_serial(usart1, rx, tx, &clocks);
-
     
     // Set up a timer expiring after 1s
     let mut counter = device.TIM2.counter_us(&clocks);

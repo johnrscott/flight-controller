@@ -6,6 +6,9 @@ pub mod init;
 pub mod uart_serial;
 mod panic_etc;
 
+pub const CLOCK_FREQ_HZ: u32 = 216_000_000;
+pub const SYSTICK_RATE_HZ: u32 = 1000;
+
 #[rtic::app(device = stm32f7xx_hal::pac, dispatchers = [EXTI0, EXTI1, EXTI2])]
 mod app {
 
@@ -15,12 +18,13 @@ mod app {
     use stm32f7xx_hal::pac::TIM2;
     use stm32f7xx_hal::{prelude::*, timer};
     use rtic_monotonics::systick::prelude::*;
-    use stm32f7xx_hal::timer::{SysCounter, SysCounterUs, CounterUs};
+    use stm32f7xx_hal::timer::CounterUs;
 
     use crate::init::init;
     use crate::uart_serial::serial_task;
+    use crate::SYSTICK_RATE_HZ;
     
-    systick_monotonic!(Mono, 100);
+    systick_monotonic!(Mono, SYSTICK_RATE_HZ);
 
     #[shared]
     pub struct Shared {}
