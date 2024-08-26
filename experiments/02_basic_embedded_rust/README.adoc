@@ -521,6 +521,83 @@ cu -l /dev/ttyACM0 -s 115200
 
 To exit, type `~.`. 
 
+=== Splitting up code
+
+Although it is not possible to non-inline the `rtic::app` module, you can move tasks and functions into modules to de-clutter the main `app` module. This follows the example https://github.com/rtic-rs/rtic/blob/a636f4e4ada7aee2e1d858303429b273eff25471/examples/lm3s6965/examples/extern_binds.rs[here].
+
+Before moving tasks into separate files in the `defmt-app-template`, I found it helpful to remove the `lib.rs` and turn the project into a normal binary crate. This requires no modifications to `Cargo.toml`, and is accomplished as follows:
+
+. Move `src/bin/minimal.rs` to `src/main.rs` and delete the `bin/` directory.
+. Copy the contents of `src/lib.rs` to the top of `src/main.rs` for now (you can move it out again later).
+
+Now, you can compile and run the project using `cargo run` (instead of using `cargo rb minimal` as before. Remember to prefix `DEFMT_LOG=info` to print the logs.
+
+NOTE: The primary reason why I converted from the library crate to the binary crate was that I could not figure out how to reference the `Local` and `Shared` structs from inside files in the _library_ crate. As a result, it did not seem possible to move tasks into other files. There may be a solution to this, but using a binary crate seems like a cleaner solution.
+
+To move tasks to other modules, first create a block like this declaring the tasks as extern in the `rtic::app` module:
+
+[,rust]
+----
+extern "Rust" {
+
+    #[init]
+    fn init(cx: init::Context) -> (Shared, Local);
+
+    #[task(priority = 1, local=[io])]
+    async fn serial_task(cx: serial_task::Context);
+
+}
+----
+
+
+Move the body of these functions to any other module in the binary crate. Make sure you include these modules in the normal way using lines like this in the crate root file `main.rs` (outside the `rtic::app` module). For example:
+
+[,rust]
+----
+pub mod init; // corresponds to a file init.rs with the init() task
+pub mod uart_serial; // corresponds to a file uart_serial.rs with serial_task()
+----
+
+Inside these files, the task functions are declared (with `async` if necessary), _as pub_ (so you can access them), but without the macro line `#[task]` above them, as follows for `init.rs`:
+
+[,rust]
+----
+// Import the required items from rtic::app module
+use crate::app::{init, Shared, Local};
+
+// No need for #[task]
+pub fn init(cx: init::Context) -> (Shared, Local) {
+    ...
+}
+----
+
+Similarly for the serial task in `uart_serial.rs`:
+
+[,rust]
+----
+// Import the required items from rtic::app module
+use crate::app::serial_task;
+
+// The Rust compiler complained that <'_> was missing
+pub async fn serial_task(cx: serial_task::Context<'_>) {
+    ...
+}
+----
+
+
+Finally, `use` the task functions above the extern block in the `rtic::app` as follows:
+
+[,rust]
+----
+use crate::init::init;
+use crate::uart_serial::serial_task;
+----
+
+You will also need to mark the `Local` and `Shared` structs as `pub` so you can use them in other files. If you need to use anything from the `rtic::app`, you can refer to it using `crate::app::your_item`.
+
+
+Above this extern block in the `rtic::app`, 
+
 == General Rust Notes
 
 This section contains a set of miscellaneous notes relating to Rust code/projects that may be helpful.

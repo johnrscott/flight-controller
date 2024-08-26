@@ -3,10 +3,12 @@ use hal::gpio::{Alternate, PB7, PA9};
 use hal::rcc::Clocks;
 use hal::serial::{self, Rx, Tx, Serial};
 use noline::error::NolineError;
+use noline::builder::EditorBuilder;
 use noline::sync_io::IO;
 use stm32f7xx_hal as hal;
 use stm32f7xx_hal::pac::USART1;
 use stm32f7xx_hal::prelude::*;
+use crate::app::serial_task;
 
 pub struct SerialWrapper {
     rx: Rx<USART1>,
@@ -91,4 +93,33 @@ pub fn init_uart_serial(
     let wrapper = SerialWrapper::new(rx, tx);
 
     IO::new(wrapper)
+}
+
+pub async fn serial_task(cx: serial_task::Context<'_>) {
+    defmt::info!("Starting serial task");
+    let mut io = cx.local.io;
+
+    let mut fail_count = 0;
+    let mut editor = loop {
+	match EditorBuilder::new_static::<256>()
+            .with_static_history::<256>()
+            .build_sync(&mut io)
+	{
+            Ok(editor) => {
+		defmt::info!("Successfully configured serial prompt");
+		break editor;
+            }
+            Err(_) => {
+		defmt::warn!(
+                    "Failed to initialise serial prompt ({}). Re-trying",
+                    fail_count
+		);
+		fail_count += 1;
+            }
+	};
+    };
+
+    while let Ok(line) = editor.readline("MCU $ ", &mut io) {
+	defmt::info!("Received command: '{}'", line);
+    }
 }
