@@ -1,6 +1,9 @@
 use embedded_io::{ErrorType, Read, Write};
-use hal::serial::{self, Rx, Tx};
+use hal::gpio::{Alternate, PB7, PA9};
+use hal::rcc::Clocks;
+use hal::serial::{self, Rx, Tx, Serial};
 use noline::error::NolineError;
+use noline::sync_io::IO;
 use stm32f7xx_hal as hal;
 use stm32f7xx_hal::pac::USART1;
 use stm32f7xx_hal::prelude::*;
@@ -62,4 +65,30 @@ impl Write for SerialWrapper {
     fn flush(&mut self) -> Result<(), Self::Error> {
         Ok(())
     }
+}
+
+type RxPin = PB7<Alternate<7>>;
+type TxPin = PA9<Alternate<7>>;
+
+pub fn init_uart_serial(
+    usart1: USART1,
+    rx: RxPin,
+    tx: TxPin,
+    clocks: &Clocks,
+) -> IO<SerialWrapper> {
+    let serial = Serial::new(
+        usart1,
+        (tx, rx),
+        &clocks,
+        serial::Config {
+            // Default to 115_200 bauds
+            ..Default::default()
+        },
+    );
+
+    let (tx, rx) = serial.split();
+
+    let wrapper = SerialWrapper::new(rx, tx);
+
+    IO::new(wrapper)
 }

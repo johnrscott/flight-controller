@@ -8,6 +8,7 @@ use panic_probe as _;
 use stm32f7xx_hal as _; // memory layout
 
 pub mod uart_serial;
+pub mod init;
 
 // same panicking *behavior* as `panic-probe` but doesn't print a panic message
 // this prevents the panic message being printed *twice* when `defmt::panic` is invoked
