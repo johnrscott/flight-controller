@@ -2,17 +2,20 @@
 #![no_std]
 #![feature(type_alias_impl_trait)]
 
-pub mod uart_serial;
 pub mod init;
+pub mod uart_serial;
 mod panic_etc;
 
-#[rtic::app(device = stm32f7xx_hal::pac, dispatchers = [TIM2, TIM3])]
+#[rtic::app(device = stm32f7xx_hal::pac, dispatchers = [EXTI0, EXTI1, EXTI2])]
 mod app {
 
     use crate::uart_serial::SerialWrapper;
     use noline::sync_io::IO;
-    use stm32f7xx_hal::prelude::*;
+    use stm32f7xx_hal::gpio::{PI1, Output, PinState};
+    use stm32f7xx_hal::pac::TIM2;
+    use stm32f7xx_hal::{prelude::*, timer};
     use rtic_monotonics::systick::prelude::*;
+    use stm32f7xx_hal::timer::{SysCounter, SysCounterUs, CounterUs};
 
     use crate::init::init;
     use crate::uart_serial::serial_task;
@@ -24,7 +27,9 @@ mod app {
     
     #[local]
     pub struct Local {
+	pub green_led: PI1<Output>,
 	pub io: IO<SerialWrapper>,
+	pub counter: CounterUs<TIM2>,
     }
 
     extern "Rust" {
@@ -53,4 +58,20 @@ mod app {
         }
     }
 
+    #[task(binds = TIM2, priority = 3, local=[green_led, counter])]
+    fn blinky_task(cx: blinky_task::Context) {
+
+	// Get local resources
+	let counter = cx.local.counter;
+	let mut led = cx.local.green_led;
+	
+	// Must clean interrupt other ISR will re-run immediately
+	counter.clear_interrupt(timer::Event::Update);
+
+	led.toggle();
+	match led.get_state() {
+	    PinState::High => defmt::info!("Toggled LED, now on"),
+	    PinState::Low => defmt::info!("Toggled LED, now off"),
+	}
+    }
 }

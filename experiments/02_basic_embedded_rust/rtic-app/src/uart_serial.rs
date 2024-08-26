@@ -1,3 +1,12 @@
+//! A simple console implementation using Noline
+//!
+//! This module implements console-like access to the
+//! MCU program via USART1 on the DISCO board (over ST-LINK v2)
+//! using Noline, which is a Rust library similar to readline
+//! (for a prompt, command history, editing, etc.)
+//!
+//!
+
 use embedded_io::{ErrorType, Read, Write};
 use hal::gpio::{Alternate, PB7, PA9};
 use hal::rcc::Clocks;
