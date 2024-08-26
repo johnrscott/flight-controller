@@ -15,7 +15,7 @@ mod app {
     use crate::uart_serial::SerialWrapper;
     use noline::sync_io::IO;
     use stm32f7xx_hal::gpio::{PI1, Output, PinState};
-    use stm32f7xx_hal::pac::TIM2;
+    use stm32f7xx_hal::pac::{TIM2, ADC3};
     use stm32f7xx_hal::{prelude::*, timer};
     use rtic_monotonics::systick::prelude::*;
     use stm32f7xx_hal::timer::CounterUs;
@@ -34,6 +34,7 @@ mod app {
 	pub green_led: PI1<Output>,
 	pub io: IO<SerialWrapper>,
 	pub counter: CounterUs<TIM2>,
+	pub adc: ADC3,
     }
 
     extern "Rust" {
@@ -67,7 +68,7 @@ mod app {
 
 	// Get local resources
 	let counter = cx.local.counter;
-	let mut led = cx.local.green_led;
+	let led = cx.local.green_led;
 	
 	// Must clean interrupt other ISR will re-run immediately
 	counter.clear_interrupt(timer::Event::Update);
@@ -77,5 +78,33 @@ mod app {
 	    PinState::High => defmt::info!("Toggled LED, now on"),
 	    PinState::Low => defmt::info!("Toggled LED, now off"),
 	}
+    }
+
+    #[task(priority = 3, local=[adc])]
+    async fn adc_task(cx: adc_task::Context) {
+
+	let adc = cx.local.adc;
+	
+	loop {
+	    // Start a conversion by setting SWSTART in CR2
+	    // (p. 420). 
+	    defmt::info!("Starting ADC conversion");
+	    adc.cr2.modify(|_, w| w.swstart().bit(true));
+	    
+	    // Wait for the EOC flag in SR (p. 420).
+	    while !adc.sr.read().eoc().bit() {}
+
+	    // Read the result. The converted data is stored
+	    // in the 16-bit DR register (p. 420)
+	    let result = adc.dr.read().bits();
+	    
+	    // "Software clears the EOC bit", Fig 74, p. 421
+	    adc.sr.modify(|_, w| w.eoc().bit(false));
+
+	    // Log the result
+	    defmt::info!("Finished ADC, result {}", result);
+	    
+	    Mono::delay(1.secs()).await;
+ 	}
     }
 }

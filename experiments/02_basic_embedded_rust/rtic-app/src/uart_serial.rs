@@ -91,10 +91,7 @@ pub fn init_uart_serial(
         usart1,
         (tx, rx),
         &clocks,
-        serial::Config {
-            // Default to 115_200 bauds
-            ..Default::default()
-        },
+	serial::Config::default(), // Default to 115_200 bauds
     );
 
     let (tx, rx) = serial.split();
