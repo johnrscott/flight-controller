@@ -7,17 +7,17 @@
 //!
 //!
 
+use crate::app::serial_task;
 use embedded_io::{ErrorType, Read, Write};
-use hal::gpio::{Alternate, PB7, PA9};
+use hal::gpio::{PA9, PB7};
 use hal::rcc::Clocks;
-use hal::serial::{self, Rx, Tx, Serial};
-use noline::error::NolineError;
+use hal::serial::{self, Rx, Serial, Tx};
 use noline::builder::EditorBuilder;
+use noline::error::NolineError;
 use noline::sync_io::IO;
 use stm32f7xx_hal as hal;
 use stm32f7xx_hal::pac::USART1;
 use stm32f7xx_hal::prelude::*;
-use crate::app::serial_task;
 
 pub struct SerialWrapper {
     rx: Rx<USART1>,
@@ -78,20 +78,12 @@ impl Write for SerialWrapper {
     }
 }
 
-type RxPin = PB7<Alternate<7>>;
-type TxPin = PA9<Alternate<7>>;
-
-pub fn init_uart_serial(
-    usart1: USART1,
-    rx: RxPin,
-    tx: TxPin,
-    clocks: &Clocks,
-) -> IO<SerialWrapper> {
+pub fn init_uart_serial(usart1: USART1, rx: PB7, tx: PA9, clocks: &Clocks) -> IO<SerialWrapper> {
     let serial = Serial::new(
         usart1,
-        (tx, rx),
+        (tx.into_alternate(), rx.into_alternate()),
         &clocks,
-	serial::Config::default(), // Default to 115_200 bauds
+        serial::Config::default(), // Default to 115_200 bauds
     );
 
     let (tx, rx) = serial.split();
@@ -107,25 +99,25 @@ pub async fn serial_task(cx: serial_task::Context<'_>) {
 
     let mut fail_count = 0;
     let mut editor = loop {
-	match EditorBuilder::new_static::<256>()
+        match EditorBuilder::new_static::<256>()
             .with_static_history::<256>()
             .build_sync(&mut io)
-	{
+        {
             Ok(editor) => {
-		defmt::info!("Successfully configured serial prompt");
-		break editor;
+                defmt::info!("Successfully configured serial prompt");
+                break editor;
             }
             Err(_) => {
-		defmt::warn!(
+                defmt::warn!(
                     "Failed to initialise serial prompt ({}). Re-trying",
                     fail_count
-		);
-		fail_count += 1;
+                );
+                fail_count += 1;
             }
-	};
+        };
     };
 
     while let Ok(line) = editor.readline("MCU $ ", &mut io) {
-	defmt::info!("Received command: '{}'", line);
+        defmt::info!("Received command: '{}'", line);
     }
 }
