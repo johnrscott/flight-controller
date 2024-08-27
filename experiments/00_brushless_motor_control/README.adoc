@@ -1,6 +1,27 @@
 = Brushless DC Motor Control using STM32F746
 
-This experiment is intended to establish whether PWM from general-purpose timers can control multiple BLDC motors. The results should decide whether it is feasible to perform all the motor control logic in a single MCU such as the STM32H747, which only has 2 advanced motor control timers, but has 10 general purpose timers. The advantages of using a single MCU is board simplicity, lower cost, and lower programming and flashing complexity. The disadvantage is any specific deficiencies with using general timers for three-phase PWM, and CPU conflict/contention running multiple motors on one CPU (this seems unlikely given how "slow" the motor control is, but it is worth checking).
+:stem: latexmath
+
+This experiment is intended to establish whether PWM from general-purpose timers can control multiple BLDC motors. The results should decide whether it is feasible to perform all the motor control logic in a single MCU such as the STM32H747, which only has 2 advanced motor control timers, but has 10 general purpose timers. The advantages of using a single MCU is board simplicity, lower cost, and lower programming and flashing complexity. The disadvantage is any specific deficiencies with using general timers for three-phase PWM, and CPU conflict/contention running multiple motors on one CPU (this seems unlikely given how "slow" the motor control is, but it is worth checking), or any other issues identified in this experiment.
+
+The intention is create simple breadboard-based hardware to drive the T-Motor P1604 3800KV motor. The electronic design of the motor driver (i.e. the three phase alternator) can be optimised later; the main intention of this experiment is to test the feasibility of the software.
+
+== Background
+
+This section contains a review of the motor control theory required for this experiment. A good starting point for understanding how to drive brushless DC (BLDC) motors is  xref:../../reference/appnote-brushless-dc-motor-control-made-easy.pdf[this Microchip application note], which contains simple explanations of the basic commutation sequence in Figure 1, and describes open-loop control. A more detailed walk through of the ADC requirements and algorithms required to drive BLDC motors is presented xref:../../reference/appnote-sensorless-trapezoidal-control-of-bldc-motors.pdf[this TI application note].
+
+T-Motor P1604 3800KV is a three phase BLDC motor, meaning it is driven by three separate wires (the phases) joined at a common point (a star topology). As described in the Microchip application note (Figure 1), current is driven in six stages called commutation steps, where current is driven into one phase and out another, and one phase is left floating. One electrical revolution means six of these steps performed in sequence.
+
+A simple BLDC motor has 3 phases and 2 poles, and produces one mechanical revolution per electrical revolution. The T-Motor P1604 3800KV is a 12N 14P (14 pole) configuration, and having 7 times as many poles means there are 7 mechanical revolutions per electrical revolution (see https://electronics.stackexchange.com/a/596083[here]).
+
+The 3800 KV of the motor shows how to translate voltage into RPM (unloaded): stem:[RPM = V \times K_v]. Since the maximum voltage of the motor is 16.5 V, the maximum RPM is 62700. That corresponds to 1045 mechanical revolutions per second (957 us/rotation), meaning 7315 electrical revolutions per second (137 us/revolution), and 43890 electrical commutations per second (meaning one every 22.8 us). This is the absolute maximum speed of the motor, and defines the upper speed limit requirement of the software system.
+
+The essential requirement for sensorless motor control is the use of ADCs to sense the back EMF induced by the rotating motor, on the floating phase (the one not sourcing or sinking current). Following the TI application note, let stem:[V_a], stem:[V_b] and stem:[V_c] denote the voltages measured by the ADC at the three phases.
+
+NOTE: A voltage divider is used to step down the phase line voltages from 16.5V to 3.3V, for the MCU. This requires a divider such as 10k on the high side and 2k2 on the low side (this will step 16.5V down to just under 3V). A capacitor in parallel with the output will low-pass filter the PWM frequency component, with a value in the range nF or less (detailed calculation below with PWM frequency calculation).
+
+A good application note that explains one sensorless BLDC motor control algorithm in detail is this xref:../../reference/appnote-sensorless-bldc-control-with-back-emf-filtering.pdf[another Microchip application note]
+
 
 == Method
 
