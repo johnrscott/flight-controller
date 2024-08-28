@@ -17,12 +17,12 @@ mod app {
     use rtic_monotonics::systick::prelude::*;
     use stm32f7xx_hal::gpio::{Output, PinState, PI1};
     use stm32f7xx_hal::pac::{ADC3, TIM2, USART1};
+    use stm32f7xx_hal::serial::Rx;
     use stm32f7xx_hal::timer;
     use stm32f7xx_hal::timer::CounterUs;
-    use stm32f7xx_hal::serial::Rx;
 
     use crate::adc::adc_task;
-    use crate::init::init;
+    use crate::init::{init, BldcCtrl, MotorStep};
     use crate::uart_serial::serial_task;
     use crate::SYSTICK_RATE_HZ;
 
@@ -37,6 +37,7 @@ mod app {
         pub serial_tx: SerialTx,
         pub serial_rx: Rx<USART1>,
         pub adc: ADC3,
+        pub bldc_ctrl: BldcCtrl,
     }
 
     extern "Rust" {
@@ -64,6 +65,28 @@ mod app {
         loop {
             Mono::delay(1.secs()).await;
             defmt::info!("Hello every 1s!");
+        }
+    }
+
+    #[task(priority = 2, local=[bldc_ctrl])]
+    async fn open_loop_bldc(cx: open_loop_bldc::Context) {
+        let step_delay = 500.millis();
+        let mut bldc = cx.local.bldc_ctrl;
+
+	let mut step = MotorStep::new();
+
+	// Set motor direction
+	let reverse = false;
+	
+        loop {
+            bldc.set_step(&step);
+            Mono::delay(step_delay).await;
+
+	    if reverse {
+		step.prev();
+	    } else {
+		step.next();
+	    }
         }
     }
 }
