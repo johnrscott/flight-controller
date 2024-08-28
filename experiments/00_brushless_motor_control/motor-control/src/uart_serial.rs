@@ -1,12 +1,9 @@
-//!
-//!
-
 use core::convert::Infallible;
 
 use crate::app::serial_task;
 use embedded_cli::cli::CliBuilder;
 use embedded_cli::Command;
-use embedded_io::{ErrorType, Read, Write};
+use embedded_io::{ErrorType, Write};
 use hal::gpio::{PA9, PB7};
 use hal::rcc::Clocks;
 use hal::serial::{self, Rx, Serial, Tx};
@@ -37,15 +34,13 @@ impl SerialTx {
     }
 }
 
-struct SerialError {}
-
 impl ErrorType for SerialTx {
     type Error = Infallible;
 }
 
 impl Write for SerialTx {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
-        if buf.len() == 0 {
+        if buf.is_empty() {
             Ok(0)
         } else {
             let mut sent_counter: usize = 0;
@@ -54,7 +49,7 @@ impl Write for SerialTx {
                 // serial write call does not block if a character
                 // is currently being transmitted; it returns without
                 // sending anything. Keep retrying until ch is sent.
-                while let Err(_) = self.tx.write(*ch) {}
+                while self.tx.write(*ch).is_err() {};
                 sent_counter += 1;
             }
             Ok(sent_counter)
@@ -75,7 +70,7 @@ pub fn init_uart_serial(
     let serial = Serial::new(
         usart1,
         (tx.into_alternate(), rx.into_alternate()),
-        &clocks,
+        clocks,
         serial::Config::default(), // Default to 115_200 bauds
     );
 

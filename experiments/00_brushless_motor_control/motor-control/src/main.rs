@@ -3,6 +3,7 @@
 
 pub mod adc;
 pub mod init;
+pub mod motor;
 pub mod uart_serial;
 
 mod panic_etc;
@@ -13,16 +14,15 @@ pub const SYSTICK_RATE_HZ: u32 = 1000;
 #[rtic::app(device = stm32f7xx_hal::pac, dispatchers = [EXTI0, EXTI1, EXTI2])]
 mod app {
 
+    use crate::motor::{BldcCtrl, MotorStep};
     use crate::uart_serial::SerialTx;
     use rtic_monotonics::systick::prelude::*;
-    use stm32f7xx_hal::gpio::{Output, PinState, PI1};
-    use stm32f7xx_hal::pac::{ADC3, TIM2, USART1};
+    use stm32f7xx_hal::gpio::{Output, PI1};
+    use stm32f7xx_hal::pac::{ADC3, USART1};
     use stm32f7xx_hal::serial::Rx;
-    use stm32f7xx_hal::timer;
-    use stm32f7xx_hal::timer::CounterUs;
 
+    use crate::init::init;
     use crate::adc::adc_task;
-    use crate::init::{init, BldcCtrl, MotorStep};
     use crate::uart_serial::serial_task;
     use crate::SYSTICK_RATE_HZ;
 
@@ -70,23 +70,29 @@ mod app {
 
     #[task(priority = 2, local=[bldc_ctrl])]
     async fn open_loop_bldc(cx: open_loop_bldc::Context) {
+        let bldc = cx.local.bldc_ctrl;
+
+        // Set motor direction
+        let reverse = false;
+
+        // Set motor PWM duty cycle
+        bldc.set_duty(0.2);
+
+        // Set the commutation time (per step)
         let step_delay = 500.millis();
-        let mut bldc = cx.local.bldc_ctrl;
 
-	let mut step = MotorStep::new();
-
-	// Set motor direction
-	let reverse = false;
-	
+        let mut step = MotorStep::new();
         loop {
             bldc.set_step(&step);
-            Mono::delay(step_delay).await;
 
-	    if reverse {
-		step.prev();
-	    } else {
-		step.next();
-	    }
+            Mono::delay(step_delay).await;
+            // Wait for BEMF crossing then delay 30 degrees
+
+            if reverse {
+                step.prev();
+            } else {
+                step.next();
+            }
         }
     }
 }

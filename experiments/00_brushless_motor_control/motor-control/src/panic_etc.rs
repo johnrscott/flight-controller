@@ -23,9 +23,10 @@ defmt::timestamp!("{=u32:ms}", {
     1000 * ticks / SYSTICK_RATE_HZ
 });
 
-/// Terminates the application and makes `probe-rs` exit with exit-code = 0
-pub fn exit() -> ! {
-    loop {
-        cortex_m::asm::bkpt();
-    }
-}
+// TODO Maybe not needed?
+// Terminates the application and makes `probe-rs` exit with exit-code = 0
+// pub fn exit() -> ! {
+//     loop {
+//         cortex_m::asm::bkpt();
+//     }
+// }
