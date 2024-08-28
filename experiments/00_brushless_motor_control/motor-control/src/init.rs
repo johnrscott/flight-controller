@@ -54,7 +54,7 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
     let pin = gpioa.pa8.into_alternate();
     let sig3 = device.TIM1.pwm_hz(pin, pwm_freq, &clocks).split();
 
-    let bldc = BldcCtrl::new(en1, en2, en3, sig1, sig2, sig3);
+    let mut bldc = BldcCtrl::new(en1, en2, en3, sig1, sig2, sig3);
 
     // Set motor PWM duty cycle
     bldc.set_duty(0.5);
@@ -73,7 +73,6 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
     crate::app::hello_loop::spawn().ok();
     crate::app::serial_task::spawn().ok();
     crate::app::adc_task::spawn().ok();
-    crate::app::open_loop_bldc::spawn().ok();
 
     defmt::info!("Ending init task");
 
