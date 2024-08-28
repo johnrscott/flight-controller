@@ -79,14 +79,15 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
     (
         Shared {
             bldc,
+	    commutator_counter: counter,
 	},
+	
         Local {
             serial_rx,
             serial_tx,
             green_led,
             adc,
 	    motor_step: MotorStep::new(),
-	    commutator_counter: counter,
 	},
     )
 }
