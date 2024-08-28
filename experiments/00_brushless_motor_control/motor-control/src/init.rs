@@ -1,10 +1,11 @@
 use crate::adc::init_adc3;
 use crate::app::Mono;
 use crate::app::{init, Local, Shared};
-use crate::motor::BldcCtrl;
+use crate::motor::{BldcCtrl, MotorStep};
 use crate::uart_serial::init_uart_serial;
 use stm32f7xx_hal::rcc::{self, HSEClock};
 use stm32f7xx_hal::prelude::*;
+use stm32f7xx_hal::timer::Event;
 
 use crate::CLOCK_FREQ_HZ;
 
@@ -48,17 +49,18 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
 
     let pin = gpioi.pi0.into_alternate();
     let sig1 = device.TIM5.pwm_hz(pin, pwm_freq, &clocks).split();
-
-    //  -- high_side_2
     let pin = gpioa.pa15.into_alternate();
     let sig2 = device.TIM2.pwm_hz(pin, pwm_freq, &clocks).split();
-
-    //  -- high_side_3
     let pin = gpioa.pa8.into_alternate();
     let sig3 = device.TIM1.pwm_hz(pin, pwm_freq, &clocks).split();
 
-    let bldc_ctrl = BldcCtrl::new(en1, en2, en3, sig1, sig2, sig3);
+    let bldc = BldcCtrl::new(en1, en2, en3, sig1, sig2, sig3);
 
+    // Set up the motor commutation timer
+    let mut timer = device.TIM3.counter_us(&clocks);
+    timer.start(5.millis()).unwrap();
+    timer.listen(Event::Update);
+    
     // Set up the green output LED
     let green_led = gpioi.pi1.into_push_pull_output();
 
@@ -70,13 +72,15 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
     defmt::info!("Ending init task");
 
     (
-        Shared {},
+        Shared {
+            bldc,
+	},
         Local {
             serial_rx,
             serial_tx,
             green_led,
             adc,
-            bldc_ctrl,
+	    motor_step: MotorStep::new()
         },
     )
 }

@@ -29,7 +29,9 @@ mod app {
     systick_monotonic!(Mono, SYSTICK_RATE_HZ);
 
     #[shared]
-    pub struct Shared {}
+    pub struct Shared {
+        pub bldc: BldcCtrl,
+    }
 
     #[local]
     pub struct Local {
@@ -37,7 +39,7 @@ mod app {
         pub serial_tx: SerialTx,
         pub serial_rx: Rx<USART1>,
         pub adc: ADC3,
-        pub bldc_ctrl: BldcCtrl,
+	pub motor_step: MotorStep,
     }
 
     extern "Rust" {
@@ -68,19 +70,49 @@ mod app {
         }
     }
 
-    #[task(priority = 2, local=[bldc_ctrl])]
-    async fn open_loop_bldc(cx: open_loop_bldc::Context) {
-        let bldc = cx.local.bldc_ctrl;
+    /// Motor commutation timer interrupt service routine
+    ///
+    /// This ISR is responsible for updating the currents
+    /// in the three phases of the BLDC (commutation). It
+    /// is the lowest level control loop involved in the motor
+    /// control, responsible for the sensorless control to
+    /// detect the motor position and keep the commutation
+    /// in sync with the motor position.
+    #[task(binds = TIM3, priority = 10, shared=[bldc], local=[motor_step])]
+    fn commutate_bldc(mut cx: commutate_bldc::Context) {
+	let motor_step = cx.local.motor_step;
+	cx.shared.bldc.lock(|bldc| {
+	    // Currently not checking if BLDC enabled, so
+	    // commutation will happen even if PWM is off.
+	    bldc.set_step(&motor_step);
+	    motor_step.next();
+	});
+    }
+    
+    #[task(priority = 2, shared=[bldc])]
+    async fn open_loop_bldc(mut cx: open_loop_bldc::Context) {
+
+	// Lock the bldc for configuration
+	cx.shared.bldc.lock(|bldc| {
+
+	    // Set motor PWM duty cycle
+            bldc.set_duty(0.6);
+
+	    // Turn on the PWM
+	    bldc.enable();
+	});
+
+	loop {}
+	
+	/*
+        let bldc = cx.local.bldc;
 
         // Set motor direction
         let reverse = false;
 
-        // Set motor PWM duty cycle
-        bldc.set_duty(0.6);
-
         // Set the commutation time (per step)
         let step_delay = 500.micros();
-
+	
 	bldc.enable();
 	
         let mut step = MotorStep::new();
@@ -95,6 +127,7 @@ mod app {
             } else {
                 step.next();
             }
-        }
+    }
+	*/
     }
 }
