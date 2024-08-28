@@ -76,11 +76,13 @@ mod app {
         let reverse = false;
 
         // Set motor PWM duty cycle
-        bldc.set_duty(0.2);
+        bldc.set_duty(0.6);
 
         // Set the commutation time (per step)
-        let step_delay = 500.millis();
+        let step_delay = 500.micros();
 
+	bldc.enable();
+	
         let mut step = MotorStep::new();
         loop {
             bldc.set_step(&step);

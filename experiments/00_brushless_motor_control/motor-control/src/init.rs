@@ -65,6 +65,7 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
     crate::app::hello_loop::spawn().ok();
     crate::app::serial_task::spawn().ok();
     crate::app::adc_task::spawn().ok();
+    crate::app::open_loop_bldc::spawn().ok();
 
     defmt::info!("Ending init task");
 

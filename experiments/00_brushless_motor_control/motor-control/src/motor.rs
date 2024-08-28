@@ -119,6 +119,12 @@ impl BldcCtrl {
         self.duty_3 = (duty * self.max_duty_3 as f32) as u16;
     }
 
+    pub fn enable(&mut self) {
+	self.sig1.enable();
+	self.sig2.enable();
+	self.sig3.enable();
+    }
+    
     pub fn set_step(&mut self, step: &MotorStep) {
         match step.step {
             0 => {
