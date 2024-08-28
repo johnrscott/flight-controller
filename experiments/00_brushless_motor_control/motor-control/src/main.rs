@@ -18,8 +18,9 @@ mod app {
     use crate::uart_serial::SerialTx;
     use rtic_monotonics::systick::prelude::*;
     use stm32f7xx_hal::gpio::{Output, PI1};
-    use stm32f7xx_hal::pac::{ADC3, USART1};
+    use stm32f7xx_hal::pac::{ADC3, TIM3, USART1};
     use stm32f7xx_hal::serial::Rx;
+    use stm32f7xx_hal::timer::{self, CounterUs};
 
     use crate::init::init;
     use crate::adc::adc_task;
@@ -40,6 +41,7 @@ mod app {
         pub serial_rx: Rx<USART1>,
         pub adc: ADC3,
 	pub motor_step: MotorStep,
+	pub commutator_counter: CounterUs<TIM3>
     }
 
     extern "Rust" {
@@ -78,56 +80,18 @@ mod app {
     /// control, responsible for the sensorless control to
     /// detect the motor position and keep the commutation
     /// in sync with the motor position.
-    #[task(binds = TIM3, priority = 10, shared=[bldc], local=[motor_step])]
+    #[task(binds = TIM3, priority = 10, shared=[bldc], local=[commutator_counter, motor_step])]
     fn commutate_bldc(mut cx: commutate_bldc::Context) {
-	let motor_step = cx.local.motor_step;
+	let step = cx.local.motor_step;
+	let counter = cx.local.commutator_counter;
 	cx.shared.bldc.lock(|bldc| {
 	    // Currently not checking if BLDC enabled, so
 	    // commutation will happen even if PWM is off.
-	    bldc.set_step(&motor_step);
-	    motor_step.next();
-	});
-    }
-    
-    #[task(priority = 2, shared=[bldc])]
-    async fn open_loop_bldc(mut cx: open_loop_bldc::Context) {
-
-	// Lock the bldc for configuration
-	cx.shared.bldc.lock(|bldc| {
-
-	    // Set motor PWM duty cycle
-            bldc.set_duty(0.6);
-
-	    // Turn on the PWM
-	    bldc.enable();
+	    bldc.set_step(&step);
+	    step.next();
 	});
 
-	loop {}
-	
-	/*
-        let bldc = cx.local.bldc;
-
-        // Set motor direction
-        let reverse = false;
-
-        // Set the commutation time (per step)
-        let step_delay = 500.micros();
-	
-	bldc.enable();
-	
-        let mut step = MotorStep::new();
-        loop {
-            bldc.set_step(&step);
-
-            Mono::delay(step_delay).await;
-            // Wait for BEMF crossing then delay 30 degrees
-
-            if reverse {
-                step.prev();
-            } else {
-                step.next();
-            }
-    }
-	*/
+	// Clear to prevent immediate re-entry into ISR
+	counter.clear_interrupt(timer::Event::Update);
     }
 }

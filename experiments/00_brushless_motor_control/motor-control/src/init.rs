@@ -56,10 +56,16 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
 
     let bldc = BldcCtrl::new(en1, en2, en3, sig1, sig2, sig3);
 
+    // Set motor PWM duty cycle
+    bldc.set_duty(0.5);
+    
+    // Turn on the PWM
+    bldc.enable();
+    
     // Set up the motor commutation timer
-    let mut timer = device.TIM3.counter_us(&clocks);
-    timer.start(5.millis()).unwrap();
-    timer.listen(Event::Update);
+    let mut counter = device.TIM3.counter_us(&clocks);
+    counter.start(5.millis()).unwrap();
+    counter.listen(Event::Update);
     
     // Set up the green output LED
     let green_led = gpioi.pi1.into_push_pull_output();
@@ -80,7 +86,8 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
             serial_tx,
             green_led,
             adc,
-	    motor_step: MotorStep::new()
-        },
+	    motor_step: MotorStep::new(),
+	    commutator_counter: counter,
+	},
     )
 }
