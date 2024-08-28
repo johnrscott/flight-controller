@@ -1,0 +1,8 @@
+= Motor Control Firmware
+
+[,bash]
+----
+rustup component add thumbv7em-none-eabihf
+cargo install flip-link
+----
+

@@ -36,7 +36,6 @@ mod app {
         pub green_led: PI1<Output>,
         pub serial_tx: SerialTx,
         pub serial_rx: Rx<USART1>,
-        pub counter: CounterUs<TIM2>,
         pub adc: ADC3,
     }
 
@@ -65,22 +64,6 @@ mod app {
         loop {
             Mono::delay(1.secs()).await;
             defmt::info!("Hello every 1s!");
-        }
-    }
-
-    #[task(binds = TIM2, priority = 3, local=[green_led, counter])]
-    fn blinky_task(cx: blinky_task::Context) {
-        // Get local resources
-        let counter = cx.local.counter;
-        let led = cx.local.green_led;
-
-        // Must clean interrupt other ISR will re-run immediately
-        counter.clear_interrupt(timer::Event::Update);
-
-        led.toggle();
-        match led.get_state() {
-            PinState::High => defmt::info!("Toggled LED, now on"),
-            PinState::Low => defmt::info!("Toggled LED, now off"),
         }
     }
 }

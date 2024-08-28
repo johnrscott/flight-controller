@@ -350,6 +350,8 @@ features = ["stm32f746", "rt"]
 . Import the HAL into the `rtic-app/src/lib.rs`: `use stm32f7xx_hal as _;`.
 . Set the HAL and list of free interrupts in the `rtic::app` macro in `rtic-app/src/bin/minimal.rs`: `#[rtic::app(device = stm32f7xx_hal::pac, dispatchers = [TIM2])]`. See the list of STM32F7xx interrupts in the `stm32f7xx-hal::pac::Interrupt` enum https://docs.rs/stm32f7xx-hal/latest/stm32f7xx_hal/pac/enum.Interrupt.html[here]. These interrupts are associated to software tasks in the application.
 
+NOTE: When I used the template, it sets up the folder to use nightly Rust by default (see the `rust-toolchain.toml` file). This is not necessary anymore; the requirements for RTIC v2 are documented https://rtic.rs/2/book/en/migration_v1_v2.html[here]. All that is required is Rust stable, greater than 1.75, in order to have available the `type_alias_impl_trait` feature. To change back to stable rust, delete the `rust-toolchain.toml`, and run `rustup default stable` (globally set the toolchain to use stable), and then delete the `#![feature(type_alias_impl_trait)]` line from the top of `bin/minimal.rs`.
+
 The application should now build using `cargo build`. You can flash and run it (after connecting the DISCO board) by running:
 
 [,bash]
@@ -622,3 +624,53 @@ To fix the problem, ensure that crate version are consistent. You can use `cargo
 You can also avoid the problem by using the version of the crate exposed by your other dependency, and not declaring it as a dependency yourself. For example, you can access `cortex-m` through the `stm32f7xx-hal` crate.
 
 When I had this problem, I fixed it by changing `stm32f7xx-hal` to v0.8.0, and changing `cortex-m` to v0.7.7 (both the latest versions).
+
+== Rust Analyzer Notes
+
+If you get the following error in the Emacs `stderr` buffer when attempting to start rust-analyzer: `error: 'rust-analyzer' is not installed for the toolchain 'nightly-x86_64-unknown-linux-gnu'`, then run the following command in the linux terminal:
+
+[,bash]
+----
+rustup component add rust-analyzer
+----
+
+The issue is something to do with the installation getting out of sync. after you installed new targets or set up a new Rust version.
+
+== RTIC and Rust Versions
+
+I ran into the following error compiling an RTIC project using Rust nightly version 1.82:
+
+[,bash]
+----
+  = note: rust-lld: error: /home/john/Documents/git/flight-controller/experiments/00_brushless_motor_control/motor-control/target/thumbv7em-none-eabihf/debug/build/defmt-fefa798da7268d11/out/defmt.x:7: symbol not found: __defmt_default_panic
+          rust-lld: error: /home/john/Documents/git/flight-controller/experiments/00_brushless_motor_control/motor-control/target/thumbv7em-none-eabihf/debug/build/defmt-fefa798da7268d11/out/defmt.x:7: symbol not found: __defmt_default_panic
+          rust-lld: error: /home/john/Documents/git/flight-controller/experiments/00_brushless_motor_control/motor-control/target/thumbv7em-none-eabihf/debug/build/defmt-fefa798da7268d11/out/defmt.x:7: symbol not found: __defmt_default_panic
+          rust-lld: error: /home/john/Documents/git/flight-controller/experiments/00_brushless_motor_control/motor-control/target/thumbv7em-none-eabihf/debug/build/defmt-fefa798da7268d11/out/defmt.x:7: symbol not found: __defmt_default_panic
+          
+          flip-link: the native linker failed to link the program normally; please check your project configuration and linker scripts
+          
+
+warning: `motor-control` (bin "motor-control") generated 8 warnings
+error: could not compile `motor-control` (bin "motor-control") due to 1 previous error; 8 warnings emitted
+----
+
+After downgrading the Rust version to nightly 1.80, the build worked again. To do that, you can install a particular Rust version using:
+
+[,bash]
+----
+rustup toolchain install nightly-2024-05-12 # version 1.80
+rustup target add thumbv7em-none-eabihf
+----
+
+and make sure that the `rust-toolchain.toml` is updated to include the version:
+
+[,toml]
+----
+[toolchain]
+channel = "nightly-2024-05-12" # version 1.80
+components = [ "rust-src", "rustfmt", "llvm-tools-preview" ]
+----
+
+However, it turns out that Rust nightly is no longer necessary for RTIC, and the template I used (`defmt-app-template`) is just out of date. The requirements for RTIC v2 are documented https://rtic.rs/2/book/en/migration_v1_v2.html[here]. All that is required is Rust stable, greater than 1.75, in order to have available the `type_alias_impl_trait` feature.
+
+To change back to stable rust, delete the `rust-toolchain.toml`, and run `rustup default stable` (globally set the toolchain to use stable), and then delete the `#![feature(type_alias_impl_trait)]` line from the top of `main.rs`.
