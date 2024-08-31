@@ -23,6 +23,9 @@ pub fn init_adc3(rcc: &RCC, adc3: ADC3, pa0: PA0) -> ADC3 {
 
     // ADC setup (PAC, not HAL). References to page numbers
     // refer to the RM0385 rev 8 reference manual.
+
+    // Turn the pin into an analog output (this is a HAL
+    // function)
     let _ = pa0.into_analog();
 
     // Turn ADC on by setting ADON in CR2 register (p. 415)

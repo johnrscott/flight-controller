@@ -31,8 +31,8 @@ mod app {
 
     #[shared]
     pub struct Shared {
-        pub bldc: BldcCtrl,
-	pub commutator_counter: CounterUs<TIM3>
+        // pub bldc: BldcCtrl,
+	// pub commutator_counter: CounterUs<TIM3>
     }
 
     #[local]
@@ -41,7 +41,7 @@ mod app {
         pub serial_tx: SerialTx,
         pub serial_rx: Rx<USART1>,
         pub adc: ADC3,
-	pub motor_step: MotorStep,
+	// pub motor_step: MotorStep,
     }
 
     extern "Rust" {
@@ -49,7 +49,7 @@ mod app {
         #[init]
         fn init(cx: init::Context) -> (Shared, Local);
 
-        #[task(priority = 1, local=[serial_rx, serial_tx], shared=[bldc, commutator_counter])]
+        #[task(priority = 1, local=[serial_rx, serial_tx])]
         async fn serial_task(cx: serial_task::Context);
 
         #[task(priority = 3, local=[adc])]
@@ -72,6 +72,7 @@ mod app {
         }
     }
 
+    /*
     /// Motor commutation timer interrupt service routine
     ///
     /// This ISR is responsible for updating the currents
@@ -94,5 +95,6 @@ mod app {
 	cx.shared.commutator_counter.lock(|counter| {
 	    counter.clear_interrupt(timer::Event::Update);
 	});
-    }
+}
+    */
 }

@@ -345,16 +345,9 @@ The main reference for this experiment is xref:../../reference/appnote-sensorles
 
 For now, we will use all three ADCs of the STM32F746, one for each phase measurement. The ADC measurements must be synchronised to the PWM cycle starts. This can be achieved by writing `0b01` to `EXTEN[1:0]` (trigger on rising edge), and then setting the trigger source (`EXTSEL[3:0]`) to a timer channel source (whichever timer channel is driving the PWM).
 
-STM32 Timers can generate an interrupt on counter reload, which occurs irrespective of whether the duty cycle is zero or non-zero. As a result, one timer can be used as the main synchroniser for all other timers and ADCs.
+The simplest way to synchronise multiple timers is to treat one as the synchroniser (by writing `001` to the `MMS[2:0]` bits of the `TIMx_CR2` register). This sets this timer to output its enable signal to other timers, causing them to start at the same time (see the description on p. 790 of the reference manual). Synchronised counters are set to use this trigger input to enable them. All counters are set in PWM mode (where `TIMx_ARR` is set to the period, and `TIMx_CCRx` is set to the duty cycle, a proportion of `TIMx_ARR`).
 
-The synchronising timer operates in regular PWM mode (reference manual, section 23.3.9). `TIMx_ARR` (the auto-reload register) is loaded with the PWM period, and `TIMx_CCRx` determines the PWM period. When the timer wraps (on auto-reload), an updated event is used to trigger the other timers, synchronising them to this PWM. (It can also be used to trigger the ADCs.)
-
-NOTE: A great deal of flexibility is available in the PWM mode, including generation of centre-aligned and phase shifted PWM signals, controlled by using the up-down counter behaviour of the timer. This may be helpful especially in the multiple-motor controller, where phase shifting the PWMs of different motors may allow a single ADC module to be multiplexed across multiple motors.
-
-The triggered timers (all except the synchronising timer) can operate in one-pulse mode (reference manual, section 23.3.13), which allows a single programmable output pulse of a fixed length to be generated based on an external trigger. Here, the duty cycle is defined by the value of `TIMx_ARR` (take note; this is normally used for the period), and `TIMx_CCRx` should be set to 1 (0 is not allowed, and 1 means the pulse will start one clock cycle after the triggering event; this is fast enough). Note that the PWM period is not explicitly set, and is defined by the period of the synchronising timer.
-
-How to connect the synchronising timer to the synchronised timers is described in the sub-section _Using one timer to start another timer_ in section 23.3.19 of the manual. The key is to set the update event as a trigger output in the synchroniser (in `TIMx_CR2`), and set the input trigger source in `TIMx_SMCR` in the synchronised timer.
-
+NOTE: A simple way to synchronise PWM signals in the final hardware is to use the channels from the same timer as the PWMs. These share a timer counter and `TIMx_ARR` register, and so are always synchronised (they may have different duty cycles because there are separate `TIMx_CCRx` registers, one per channel).
 
 === Results
 

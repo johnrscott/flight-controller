@@ -30,6 +30,13 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
 
     let adc = init_adc3(&device.RCC, device.ADC3, gpioa.pa0);
 
+    // Create the synchronising timer
+    let tim = device.TIM1;
+
+    // 
+    adc3.cr2.modify(|_, w| w.adon().bit(true));
+
+    
     // The DISCO board has a 25 MHz oscillator connected to
     // the HSE input. Configure the MCU to use this external
     // oscillator, and then set a frequency between 12.5 MHz
@@ -45,27 +52,27 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
     let en2 = gpioh.ph6.into_push_pull_output();
     let en3 = gpioi.pi2.into_push_pull_output();
 
-    let pwm_freq = 20.kHz();
+    //let pwm_freq = 20.kHz();
 
-    let pin = gpioi.pi0.into_alternate();
-    let sig1 = device.TIM5.pwm_hz(pin, pwm_freq, &clocks).split();
-    let pin = gpioa.pa15.into_alternate();
-    let sig2 = device.TIM2.pwm_hz(pin, pwm_freq, &clocks).split();
-    let pin = gpioa.pa8.into_alternate();
-    let sig3 = device.TIM1.pwm_hz(pin, pwm_freq, &clocks).split();
+    // let pin = gpioi.pi0.into_alternate();
+    // let sig1 = device.TIM5.pwm_hz(pin, pwm_freq, &clocks).split();
+    // let pin = gpioa.pa15.into_alternate();
+    // let sig2 = device.TIM2.pwm_hz(pin, pwm_freq, &clocks).split();
+    // let pin = gpioa.pa8.into_alternate();
+    // let sig3 = device.TIM1.pwm_hz(pin, pwm_freq, &clocks).split();
 
-    let mut bldc = BldcCtrl::new(en1, en2, en3, sig1, sig2, sig3);
+    // let mut bldc = BldcCtrl::new(en1, en2, en3, sig1, sig2, sig3);
 
-    // Set motor PWM duty cycle
-    bldc.set_duty(0.5);
+    // // Set motor PWM duty cycle
+    // bldc.set_duty(0.5);
     
-    // Turn on the PWM
-    bldc.enable();
+    // // Turn on the PWM
+    // bldc.enable();
     
     // Set up the motor commutation timer
-    let mut counter = device.TIM3.counter_us(&clocks);
-    counter.start(5.millis()).unwrap();
-    counter.listen(Event::Update);
+    // let mut counter = device.TIM3.counter_us(&clocks);
+    // counter.start(5.millis()).unwrap();
+    // counter.listen(Event::Update);
     
     // Set up the green output LED
     let green_led = gpioi.pi1.into_push_pull_output();
@@ -78,8 +85,8 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
 
     (
         Shared {
-            bldc,
-	    commutator_counter: counter,
+            //bldc,
+	    //commutator_counter: counter,
 	},
 	
         Local {
@@ -87,7 +94,7 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
             serial_tx,
             green_led,
             adc,
-	    motor_step: MotorStep::new(),
+	    //motor_step: MotorStep::new(),
 	},
     )
 }

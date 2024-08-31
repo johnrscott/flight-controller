@@ -152,14 +152,14 @@ Use left and right to move inside input."
                         cli.writer().write_str("Cli can't shutdown now")?;
                     },
 		    Base::PwmDuty { duty } => {
-			cx.shared.bldc.lock(|bldc| {
-			    bldc.set_duty(duty)
-			})
+			// cx.shared.bldc.lock(|bldc| {
+			//     bldc.set_duty(duty)
+			// })
 		    },
 		    Base::StepTime { time } => {
-			cx.shared.commutator_counter.lock(|counter| {
-			    counter.start(time.micros()).unwrap();
-			});
+			// cx.shared.commutator_counter.lock(|counter| {
+			//     counter.start(time.micros()).unwrap();
+			// });
 		    }
                 }
                 Ok(())
