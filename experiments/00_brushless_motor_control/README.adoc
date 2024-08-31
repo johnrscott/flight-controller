@@ -23,7 +23,7 @@ NOTE: A voltage divider is used to step down the phase line voltages from 16.5V 
 
 A good application note that explains one sensorless BLDC motor control algorithm in detail is this xref:../../reference/appnote-sensorless-bldc-control-with-back-emf-filtering.pdf[another Microchip application note]
 
-== Experiment 1: Open Loop Control
+== Experiment 1: Open loop control
  
 The intention is create simple breadboard-based hardware to drive the T-Motor P1604 3800KV motor. The electrical design of the motor driver can be optimised later; the main intention of this experiment is to test the feasibility of the software.
 
@@ -275,7 +275,7 @@ To run the code, plug in the DISCO board, install the toolchain as described in 
 cargo run
 ----
 
-== Experiment 2: Back EMF investigation
+== Experiment 2: Back EMF signal measurement
 
 The next step is to incorporate the analog to digital converters required for sensorless closed-loop control of the commutation. 
 
@@ -326,6 +326,27 @@ The diagram below shows the back-EMF signal after the phase is driven.
 
 .Back-EMF leading up to the on phase.
 image::falling-back-emf.png[]
+
+== Experiment 3: Sensorless control
+
+The next step is to get a working version of the sensorless control algorithm. This involves reading the three motor phase voltages using the ADC peripheral, and using the resulting measurements to determine when to commutate the PWM signals.
+
+In this first experiment, the question of driving four motors using one STM32F7 will not be addressed. The purpose of this initial investigation is to get the algorithms works.
+
+The main reference for this experiment is xref:../../reference/appnote-sensorless-bldc-control-with-back-emf-filtering.pdf[this Microchip application note], which describes the sensorless algorithm in detail. There are three steps to the control:
+
+* Measure the motor phase voltages at the motor terminals using resistor dividers to bring the voltage within the range of the ADC. During each on-time of whichever PWM signal is currently driving the motor, take a sample of the voltage at _all_ three motor phases (i.e. not just the floating phase).
+* Calculate the virtual neutral voltage of the motor, which is the average of the measured voltages: stem:[V_n = (V_a + V_b + V_c) / 3]. Compare the voltage of the floating phase against stem:[V_n] to determine if a back-EMF crossing has occurred. Apply signal processing algorithms (e.g. the majority function algorithm in the application note) to make the calculation of when the crossing occurs more robust.
+* Commutate the PWM signals after a delay of 30 electrical degrees following the back-EMF crossing (i.e. half the commutation step time, determined from past step times).
+
+=== Methods
+
+For now, we will use all three ADCs of the STM32F746, one for each phase measurement. The ADC measurements must be synchronised to the PWM cycle starts. This can be achieved by writing `0b01` to `EXTEN[1:0]` (trigger on rising edge), and then setting the trigger source (`EXTSEL[3:0]`) to a timer channel source (whichever timer channel is driving the PWM). However, no one ADC can be triggered by any one PWM timer, because the PWM is only on while its phase is being driven. Instead, a timer is required that is always on irrespective of which phase is driven.
+
+Since all voltages must be measured at every PWM on-time, irrespective of which phase is being driven, it is not possible to trigger
+
+
+=== Results
 
 == Conclusions
 
