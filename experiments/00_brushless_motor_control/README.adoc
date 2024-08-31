@@ -333,6 +333,8 @@ The next step is to get a working version of the sensorless control algorithm. T
 
 In this first experiment, the question of driving four motors using one STM32F7 will not be addressed. The purpose of this initial investigation is to get the algorithms works.
 
+NOTE: Although the STM32F7 series and many STM32 devices contain specific advanced motor control timing peripherals (e.g. TIM1/TIM8 in the STM32F746 device), we will not be using their features. This is because no STM32 device contains more than three of these advanced motor control peripherals, and therefore this approach cannot generalise to a solution where one MCU controls all four motors. If using a single MCU is ruled out and four MCUs become necessary, or if you only need to drive at most three motors, using these advanced peripherals is a better approach.
+
 The main reference for this experiment is xref:../../reference/appnote-sensorless-bldc-control-with-back-emf-filtering.pdf[this Microchip application note], which describes the sensorless algorithm in detail. There are three steps to the control:
 
 * Measure the motor phase voltages at the motor terminals using resistor dividers to bring the voltage within the range of the ADC. During each on-time of whichever PWM signal is currently driving the motor, take a sample of the voltage at _all_ three motor phases (i.e. not just the floating phase).
@@ -341,9 +343,17 @@ The main reference for this experiment is xref:../../reference/appnote-sensorles
 
 === Methods
 
-For now, we will use all three ADCs of the STM32F746, one for each phase measurement. The ADC measurements must be synchronised to the PWM cycle starts. This can be achieved by writing `0b01` to `EXTEN[1:0]` (trigger on rising edge), and then setting the trigger source (`EXTSEL[3:0]`) to a timer channel source (whichever timer channel is driving the PWM). However, no one ADC can be triggered by any one PWM timer, because the PWM is only on while its phase is being driven. Instead, a timer is required that is always on irrespective of which phase is driven.
+For now, we will use all three ADCs of the STM32F746, one for each phase measurement. The ADC measurements must be synchronised to the PWM cycle starts. This can be achieved by writing `0b01` to `EXTEN[1:0]` (trigger on rising edge), and then setting the trigger source (`EXTSEL[3:0]`) to a timer channel source (whichever timer channel is driving the PWM).
 
-Since all voltages must be measured at every PWM on-time, irrespective of which phase is being driven, it is not possible to trigger
+STM32 Timers can generate an interrupt on counter reload, which occurs irrespective of whether the duty cycle is zero or non-zero. As a result, one timer can be used as the main synchroniser for all other timers and ADCs.
+
+The synchronising timer operates in regular PWM mode (reference manual, section 23.3.9). `TIMx_ARR` (the auto-reload register) is loaded with the PWM period, and `TIMx_CCRx` determines the PWM period. When the timer wraps (on auto-reload), an updated event is used to trigger the other timers, synchronising them to this PWM. (It can also be used to trigger the ADCs.)
+
+NOTE: A great deal of flexibility is available in the PWM mode, including generation of centre-aligned and phase shifted PWM signals, controlled by using the up-down counter behaviour of the timer. This may be helpful especially in the multiple-motor controller, where phase shifting the PWMs of different motors may allow a single ADC module to be multiplexed across multiple motors.
+
+The triggered timers (all except the synchronising timer) can operate in one-pulse mode (reference manual, section 23.3.13), which allows a single programmable output pulse of a fixed length to be generated based on an external trigger. Here, the duty cycle is defined by the value of `TIMx_ARR` (take note; this is normally used for the period), and `TIMx_CCRx` should be set to 1 (0 is not allowed, and 1 means the pulse will start one clock cycle after the triggering event; this is fast enough). Note that the PWM period is not explicitly set, and is defined by the period of the synchronising timer.
+
+How to connect the synchronising timer to the synchronised timers is described in the sub-section _Using one timer to start another timer_ in section 23.3.19 of the manual. The key is to set the update event as a trigger output in the synchroniser (in `TIMx_CR2`), and set the input trigger source in `TIMx_SMCR` in the synchronised timer.
 
 
 === Results
