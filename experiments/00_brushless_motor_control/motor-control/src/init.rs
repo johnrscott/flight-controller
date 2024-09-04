@@ -201,12 +201,12 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
     let pwm3 = Pwm3::new(&device.RCC, device.TIM5, gpioi.pi0);
     pwm1.enable(true);
 
-    pwm1.set_period(20);
-    pwm1.set_duty(5);
-    pwm2.set_period(20);
-    pwm2.set_duty(5);
-    pwm3.set_period(20);
-    pwm3.set_duty(5);
+    pwm1.set_period(200);
+    pwm1.set_duty(50);
+    pwm2.set_period(200);
+    pwm2.set_duty(50);
+    pwm3.set_period(200);
+    pwm3.set_duty(50);
     
     // The DISCO board has a 25 MHz oscillator connected to
     // the HSE input. Configure the MCU to use this external
