@@ -22,8 +22,8 @@ mod app {
     use stm32f7xx_hal::serial::Rx;
     use stm32f7xx_hal::timer::{self, CounterUs};
 
-    use crate::init::init;
     use crate::adc::adc_task;
+    use crate::init::init;
     use crate::uart_serial::serial_task;
     use crate::SYSTICK_RATE_HZ;
 
@@ -32,7 +32,7 @@ mod app {
     #[shared]
     pub struct Shared {
         // pub bldc: BldcCtrl,
-	// pub commutator_counter: CounterUs<TIM3>
+        // pub commutator_counter: CounterUs<TIM3>
     }
 
     #[local]
@@ -41,7 +41,7 @@ mod app {
         pub serial_tx: SerialTx,
         pub serial_rx: Rx<USART1>,
         pub adc: ADC3,
-	// pub motor_step: MotorStep,
+        // pub motor_step: MotorStep,
     }
 
     extern "Rust" {
@@ -73,28 +73,28 @@ mod app {
     }
 
     /*
-    /// Motor commutation timer interrupt service routine
-    ///
-    /// This ISR is responsible for updating the currents
-    /// in the three phases of the BLDC (commutation). It
-    /// is the lowest level control loop involved in the motor
-    /// control, responsible for the sensorless control to
-    /// detect the motor position and keep the commutation
-    /// in sync with the motor position.
-    #[task(binds = TIM3, priority = 10, shared = [bldc, commutator_counter], local = [motor_step])]
-    fn commutate_bldc(mut cx: commutate_bldc::Context) {
-	let step = cx.local.motor_step;
-	cx.shared.bldc.lock(|bldc| {
-	    // Currently not checking if BLDC enabled, so
-	    // commutation will happen even if PWM is off.
-	    bldc.set_step(&step);
-	    step.next();
-	});
+        /// Motor commutation timer interrupt service routine
+        ///
+        /// This ISR is responsible for updating the currents
+        /// in the three phases of the BLDC (commutation). It
+        /// is the lowest level control loop involved in the motor
+        /// control, responsible for the sensorless control to
+        /// detect the motor position and keep the commutation
+        /// in sync with the motor position.
+        #[task(binds = TIM3, priority = 10, shared = [bldc, commutator_counter], local = [motor_step])]
+        fn commutate_bldc(mut cx: commutate_bldc::Context) {
+        let step = cx.local.motor_step;
+        cx.shared.bldc.lock(|bldc| {
+            // Currently not checking if BLDC enabled, so
+            // commutation will happen even if PWM is off.
+            bldc.set_step(&step);
+            step.next();
+        });
 
-	// Clear to prevent immediate re-entry into ISR
-	cx.shared.commutator_counter.lock(|counter| {
-	    counter.clear_interrupt(timer::Event::Update);
-	});
-}
-    */
+        // Clear to prevent immediate re-entry into ISR
+        cx.shared.commutator_counter.lock(|counter| {
+            counter.clear_interrupt(timer::Event::Update);
+        });
+    }
+        */
 }

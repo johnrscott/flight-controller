@@ -3,6 +3,7 @@ use crate::app::Mono;
 use rtic_monotonics::systick::prelude::*;
 use stm32f7xx_hal::gpio::PA0;
 use stm32f7xx_hal::pac::ADC3;
+use stm32f7xx_hal::pac::GPIOA;
 use stm32f7xx_hal::pac::RCC;
 
 /// Initialise the IN0 channel of ADC3 module
@@ -17,7 +18,7 @@ use stm32f7xx_hal::pac::RCC;
 /// Writing the type PA0 (instead of, e.g.,  PA0<Analog>)
 /// means you can pass a raw gpio.pa0 (without calling
 /// into_analog). pa0 is consumed.
-pub fn init_adc3(rcc: &RCC, adc3: ADC3, pa0: PA0) -> ADC3 {
+pub fn init_adc3(rcc: &RCC, adc3: ADC3, pin: PA0) -> ADC3 {
     // Set up ADC3 clocks
     rcc.apb2enr.modify(|_, w| w.adc3en().bit(true));
 
@@ -26,7 +27,8 @@ pub fn init_adc3(rcc: &RCC, adc3: ADC3, pa0: PA0) -> ADC3 {
 
     // Turn the pin into an analog output (this is a HAL
     // function)
-    let _ = pa0.into_analog();
+    //gpioa.moder.write(|w| w.moder0().bits(0b11));
+    pin.into_analog();
 
     // Turn ADC on by setting ADON in CR2 register (p. 415)
     adc3.cr2.modify(|_, w| w.adon().bit(true));

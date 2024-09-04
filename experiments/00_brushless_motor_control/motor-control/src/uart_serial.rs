@@ -7,11 +7,11 @@ use embedded_io::{ErrorType, Write};
 use hal::gpio::{PA9, PB7};
 use hal::rcc::Clocks;
 use hal::serial::{self, Rx, Serial, Tx};
+use rtic::Mutex;
 use stm32f7xx_hal as hal;
 use stm32f7xx_hal::pac::USART1;
 use stm32f7xx_hal::prelude::*;
 use ufmt::uwrite;
-use rtic::Mutex;
 
 #[derive(Command)]
 enum Base<'a> {
@@ -26,13 +26,13 @@ enum Base<'a> {
         /// The duty cycle value, between 0.0 and 1.0
         duty: f32,
     },
-    
+
     /// Set the commutation step time for BLDC control
     StepTime {
         /// The commutation step period in microseconds
         time: u32,
     },
-    
+
     /// Stop CLI and exit
     Exit,
 }
@@ -62,7 +62,7 @@ impl Write for SerialTx {
                 // serial write call does not block if a character
                 // is currently being transmitted; it returns without
                 // sending anything. Keep retrying until ch is sent.
-                while self.tx.write(*ch).is_err() {};
+                while self.tx.write(*ch).is_err() {}
                 sent_counter += 1;
             }
             Ok(sent_counter)
@@ -150,17 +150,17 @@ Use left and right to move inside input."
                     Base::Exit => {
                         // We can write via normal function if formatting not needed
                         cli.writer().write_str("Cli can't shutdown now")?;
-                    },
-		    Base::PwmDuty { duty } => {
-			// cx.shared.bldc.lock(|bldc| {
-			//     bldc.set_duty(duty)
-			// })
-		    },
-		    Base::StepTime { time } => {
-			// cx.shared.commutator_counter.lock(|counter| {
-			//     counter.start(time.micros()).unwrap();
-			// });
-		    }
+                    }
+                    Base::PwmDuty { duty } => {
+                        // cx.shared.bldc.lock(|bldc| {
+                        //     bldc.set_duty(duty)
+                        // })
+                    }
+                    Base::StepTime { time } => {
+                        // cx.shared.commutator_counter.lock(|counter| {
+                        //     counter.start(time.micros()).unwrap();
+                        // });
+                    }
                 }
                 Ok(())
             }),

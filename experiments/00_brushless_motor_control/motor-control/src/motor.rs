@@ -1,5 +1,5 @@
 use stm32f7xx_hal::{
-    gpio::{PB4, PH6, PI2, Output},
+    gpio::{Output, PB4, PH6, PI2},
     pac::{TIM1, TIM2, TIM5},
     timer::PwmChannel,
 };
@@ -11,7 +11,7 @@ pub struct MotorStep {
 
 impl Default for MotorStep {
     fn default() -> Self {
-	Self::new()
+        Self::new()
     }
 }
 
@@ -120,11 +120,11 @@ impl BldcCtrl {
     }
 
     pub fn enable(&mut self) {
-	self.sig1.enable();
-	self.sig2.enable();
-	self.sig3.enable();
+        self.sig1.enable();
+        self.sig2.enable();
+        self.sig3.enable();
     }
-    
+
     pub fn set_step(&mut self, step: &MotorStep) {
         match step.step {
             0 => {
