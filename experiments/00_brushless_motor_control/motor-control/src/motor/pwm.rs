@@ -1,3 +1,6 @@
+//! Simple implementation of synchronised PWM and ADC
+//!
+
 use cortex_m::asm::nop;
 use stm32f7xx_hal::{
     gpio::{PA15, PA8, PI0},
@@ -8,6 +11,7 @@ pub struct ThreeChannelPwm {
     pwm1: Pwm1,
     pwm2: Pwm2,
     pwm3: Pwm3,
+    period: u16,
 }
 
 impl ThreeChannelPwm {
@@ -24,20 +28,22 @@ impl ThreeChannelPwm {
         let pwm2 = Pwm2::new(rcc, tim2, pin2);
         let pwm3 = Pwm3::new(rcc, tim3, pin3);
 
-        Self { pwm1, pwm2, pwm3 }
+        Self { pwm1, pwm2, pwm3, period: 1000 }
     }
 
     pub fn enable(&self, enable: bool) {
         self.pwm1.enable(enable);
     }
 
-    pub fn set_period(&self, period: u16) {
+    pub fn set_period(&mut self, period: u16) {
+	self.period = period;
         self.pwm1.set_period(period);
         self.pwm2.set_period(period);
         self.pwm3.set_period(period);
     }
 
-    pub fn set_duty(&self, which: u8, duty: u16) {
+    pub fn set_duty(&self, which: u8, duty: f32) {
+	let duty = (duty * self.period as f32) as u16;
         match which {
             0 => self.pwm1.set_duty(duty),
             1 => self.pwm2.set_duty(duty),

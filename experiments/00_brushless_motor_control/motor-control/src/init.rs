@@ -50,6 +50,8 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
     );
     
     three_phase_controller.enable(true);
+    three_phase_controller.set_period(100);
+    three_phase_controller.set_duty(0.0);
 
     // The DISCO board has a 25 MHz oscillator connected to
     // the HSE input. Configure the MCU to use this external

@@ -62,10 +62,15 @@ pub struct ThreePhaseController {
     en3: PI2<Output>,
     
     // Duty cycle (sets motor power)
-    duty: u16,
+    duty: f32,
 }
 
 impl ThreePhaseController {
+
+    pub fn set_period(&mut self, period: u16) {
+	self.pwm_channels.set_period(period);
+    }
+
     pub fn new(
         en1: PB4<Output>,
         en2: PH6<Output>,
@@ -93,13 +98,13 @@ impl ThreePhaseController {
             en1,
             en2,
             en3,
-            duty: 0,
+            duty: 0.0,
         }
     }
 
     /// Have a think about whether to use floats or not
     pub fn set_duty(&mut self, duty: f32) {
-        self.duty = (duty * u16::MAX as f32) as u16;
+        self.duty = duty;
     }
 
     pub fn enable(&mut self, enable: bool) {
@@ -114,8 +119,8 @@ impl ThreePhaseController {
                 self.en2.set_high();
                 self.en3.set_low();
                 self.pwm_channels.set_duty(0, self.duty);
-                self.pwm_channels.set_duty(1, 0);
-                self.pwm_channels.set_duty(2, 0);
+                self.pwm_channels.set_duty(1, 0.0);
+                self.pwm_channels.set_duty(2, 0.0);
             }
 
             1 => {
@@ -123,8 +128,8 @@ impl ThreePhaseController {
                 self.en1.set_low();
                 self.en2.set_high();
                 self.en3.set_high();
-                self.pwm_channels.set_duty(0, 0);
-                self.pwm_channels.set_duty(1, 0);
+                self.pwm_channels.set_duty(0, 0.0);
+                self.pwm_channels.set_duty(1, 0.0);
                 self.pwm_channels.set_duty(2, self.duty);
             }
 
@@ -133,8 +138,8 @@ impl ThreePhaseController {
                 self.en1.set_high();
                 self.en2.set_low();
                 self.en3.set_high();
-                self.pwm_channels.set_duty(0, 0);
-                self.pwm_channels.set_duty(1, 0);
+                self.pwm_channels.set_duty(0, 0.0);
+                self.pwm_channels.set_duty(1, 0.0);
                 self.pwm_channels.set_duty(2, self.duty);
             }
 
@@ -143,9 +148,9 @@ impl ThreePhaseController {
                 self.en1.set_high();
                 self.en2.set_high();
                 self.en3.set_low();
-                self.pwm_channels.set_duty(0, 0);
+                self.pwm_channels.set_duty(0, 0.0);
                 self.pwm_channels.set_duty(1, self.duty);
-                self.pwm_channels.set_duty(2, 0);
+                self.pwm_channels.set_duty(2, 0.0);
             }
 
             4 => {
@@ -153,9 +158,9 @@ impl ThreePhaseController {
                 self.en1.set_low();
                 self.en2.set_high();
                 self.en3.set_high();
-                self.pwm_channels.set_duty(0, 0);
+                self.pwm_channels.set_duty(0, 0.0);
                 self.pwm_channels.set_duty(1, self.duty);
-                self.pwm_channels.set_duty(2, 0);
+                self.pwm_channels.set_duty(2, 0.0);
             }
 
             5 => {
@@ -164,8 +169,8 @@ impl ThreePhaseController {
                 self.en2.set_low();
                 self.en3.set_high();
                 self.pwm_channels.set_duty(0, self.duty);
-                self.pwm_channels.set_duty(1, 0);
-                self.pwm_channels.set_duty(2, 0);
+                self.pwm_channels.set_duty(1, 0.0);
+                self.pwm_channels.set_duty(2, 0.0);
             }
 
             _ => panic!("Invalid value for MotorStep"),
