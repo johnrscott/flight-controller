@@ -1,7 +1,5 @@
-use crate::adc::init_adc3;
 use crate::app::Mono;
 use crate::app::{init, Local, Shared};
-use crate::motor::pwm::ThreeChannelPwm;
 use crate::motor::{MotorStep, ThreePhaseController};
 use crate::uart_serial::init_uart_serial;
 use stm32f7xx_hal::prelude::*;
@@ -25,12 +23,12 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
     let gpiob = device.GPIOB.split();
     let gpioh = device.GPIOH.split();
     let gpioi = device.GPIOI.split();
+    let gpiof = device.GPIOF.split();
 
     // Do all the PAC-level setup here before any HAL
     // setup which eats the resources.
 
-    let adc = init_adc3(&device.RCC, device.ADC3, gpioa.pa0);
-
+    //let adc = init_adc3(&device.RCC, device.ADC3, gpioa.pa0);
 
     let en1 = gpiob.pb4.into_push_pull_output();
     let en2 = gpioh.ph6.into_push_pull_output();
@@ -47,6 +45,10 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
         gpioa.pa15.into(),
         device.TIM5,
         gpioi.pi0,
+	device.ADC3,
+	gpioa.pa0,
+	gpiof.pf10,
+	gpiof.pf9,
     );
     
     three_phase_controller.enable(true);
@@ -110,7 +112,6 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
             serial_rx,
             serial_tx,
             green_led,
-            adc,
             motor_step: MotorStep::new(),
         },
     )

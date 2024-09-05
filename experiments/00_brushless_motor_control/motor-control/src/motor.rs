@@ -1,11 +1,18 @@
 use pwm::ThreeChannelPwm;
 use stm32f7xx_hal::{
-    gpio::{Output, PA15, PA8, PB4, PH6, PI0, PI2},
-    pac::{RCC, TIM1, TIM2, TIM5},
-    timer::PwmChannel,
+    gpio::{Output, PA0, PA15, PA8, PB4, PF10, PF9, PH6, PI0, PI2},
+    pac::{ADC3, RCC, TIM1, TIM2, TIM5},
 };
 
+use crate::app::adc_task;
+
 pub mod pwm;
+
+pub fn adc_task(cx: adc_task::Context<'_>) {
+    // Implement me
+
+    
+}
 
 /// Simple wrapper for the numbers 0 to 5
 pub struct MotorStep {
@@ -63,6 +70,8 @@ pub struct ThreePhaseController {
     
     // Duty cycle (sets motor power)
     duty: f32,
+
+    adc: ADC3
 }
 
 impl ThreePhaseController {
@@ -82,6 +91,10 @@ impl ThreePhaseController {
         pin2: PA15,
         tim3: TIM5,
         pin3: PI0,
+	adc: ADC3,
+	apin1: PA0,
+	apin2: PF10,
+	apin3: PF9,
     ) -> Self {
 	let pwm_channels  = ThreeChannelPwm::new(
             rcc,
@@ -92,13 +105,42 @@ impl ThreePhaseController {
             tim3,
             pin3,
 	);
+
+	// Set up ADC3 clocks
+	rcc.apb2enr.modify(|_, w| w.adc3en().bit(true));
+
+	// ADC setup (PAC, not HAL). References to page numbers
+	// refer to the RM0385 rev 8 reference manual.
 	
+	// Set up the analog input GPIO pins
+	apin1.into_analog();
+	apin2.into_analog();
+	apin3.into_analog();
+	
+	// Turn ADC on by setting ADON in CR2 register (p. 415)
+	adc.cr2.modify(|_, w| w.adon().bit(true));
+
+	// ADC channels are multiplexed, and multiple conversions
+	// may be performed in sequence. To set up a regular group
+	// with three conversions (p. 419), write 2 to L[3:0] in SQR1....
+	adc.sqr1.modify(|_, w| w.l().bits(2));
+
+	// To set the order of conversions, write:
+	//
+	// - 0 to SQ1[4:0] in SQR3, first conversion is channel 0 (IN0).
+	// - 8 to SQ2[4:0] in SQR3, second conversion is channel 8 (IN8)
+	// - 7 to SQ3[4:0] in SQR3, second conversion is channel 7 (IN7)
+	adc.sqr3.modify(|_, w| unsafe { w.sq1().bits(0) }); // PA0
+	adc.sqr3.modify(|_, w| unsafe { w.sq2().bits(8) }); // PF10
+	adc.sqr3.modify(|_, w| unsafe { w.sq3().bits(7) }); // PF9
+
         Self {
 	    pwm_channels,
             en1,
             en2,
             en3,
             duty: 0.0,
+	    adc
         }
     }
 

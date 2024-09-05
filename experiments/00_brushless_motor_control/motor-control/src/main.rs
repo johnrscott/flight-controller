@@ -1,7 +1,6 @@
 #![no_main]
 #![no_std]
 
-pub mod adc;
 pub mod init;
 pub mod motor;
 pub mod uart_serial;
@@ -18,12 +17,13 @@ mod app {
     use crate::uart_serial::SerialTx;
     use rtic_monotonics::systick::prelude::*;
     use stm32f7xx_hal::gpio::{Output, PI1};
-    use stm32f7xx_hal::pac::{ADC3, TIM3, USART1};
+    use stm32f7xx_hal::pac::{TIM3, USART1};
     use stm32f7xx_hal::serial::Rx;
     use stm32f7xx_hal::timer::{self, CounterUs};
+    
 
-    use crate::adc::adc_task;
     use crate::init::init;
+    use crate::motor::adc_task;
     use crate::uart_serial::serial_task;
     use crate::SYSTICK_RATE_HZ;
 
@@ -40,7 +40,6 @@ mod app {
         pub green_led: PI1<Output>,
         pub serial_tx: SerialTx,
         pub serial_rx: Rx<USART1>,
-        pub adc: ADC3,
         pub motor_step: MotorStep,
     }
 
@@ -52,8 +51,8 @@ mod app {
         #[task(priority = 1, local=[serial_rx, serial_tx], shared=[three_phase_controller, commutator_counter])]
         async fn serial_task(cx: serial_task::Context);
 
-        #[task(priority = 3, local=[adc])]
-        async fn adc_task(cx: adc_task::Context);
+        #[task(binds = ADC, priority = 3, shared=[three_phase_controller])]
+        fn adc_task(cx: adc_task::Context);
     }
 
     // Optional idle, can be removed if not needed.
