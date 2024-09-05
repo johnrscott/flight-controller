@@ -14,7 +14,7 @@ pub const SYSTICK_RATE_HZ: u32 = 1000;
 #[rtic::app(device = stm32f7xx_hal::pac, dispatchers = [EXTI0, EXTI1, EXTI2])]
 mod app {
 
-    use crate::motor::{BldcCtrl, MotorStep};
+    use crate::motor::{ThreePhaseController, MotorStep};
     use crate::uart_serial::SerialTx;
     use rtic_monotonics::systick::prelude::*;
     use stm32f7xx_hal::gpio::{Output, PI1};
@@ -31,8 +31,8 @@ mod app {
 
     #[shared]
     pub struct Shared {
-        // pub bldc: BldcCtrl,
-        // pub commutator_counter: CounterUs<TIM3>
+        pub three_phase_controller: ThreePhaseController,
+        pub commutator_counter: CounterUs<TIM3>
     }
 
     #[local]
@@ -41,7 +41,7 @@ mod app {
         pub serial_tx: SerialTx,
         pub serial_rx: Rx<USART1>,
         pub adc: ADC3,
-        // pub motor_step: MotorStep,
+        pub motor_step: MotorStep,
     }
 
     extern "Rust" {
@@ -49,7 +49,7 @@ mod app {
         #[init]
         fn init(cx: init::Context) -> (Shared, Local);
 
-        #[task(priority = 1, local=[serial_rx, serial_tx])]
+        #[task(priority = 1, local=[serial_rx, serial_tx], shared=[three_phase_controller, commutator_counter])]
         async fn serial_task(cx: serial_task::Context);
 
         #[task(priority = 3, local=[adc])]
@@ -72,22 +72,21 @@ mod app {
         }
     }
 
-    /*
-        /// Motor commutation timer interrupt service routine
-        ///
-        /// This ISR is responsible for updating the currents
-        /// in the three phases of the BLDC (commutation). It
-        /// is the lowest level control loop involved in the motor
-        /// control, responsible for the sensorless control to
-        /// detect the motor position and keep the commutation
-        /// in sync with the motor position.
-        #[task(binds = TIM3, priority = 10, shared = [bldc, commutator_counter], local = [motor_step])]
-        fn commutate_bldc(mut cx: commutate_bldc::Context) {
+    /// Motor commutation timer interrupt service routine
+    ///
+    /// This ISR is responsible for updating the currents
+    /// in the three phases of the BLDC (commutation). It
+    /// is the lowest level control loop involved in the motor
+    /// control, responsible for the sensorless control to
+    /// detect the motor position and keep the commutation
+    /// in sync with the motor position.
+    #[task(binds = TIM3, priority = 10, shared = [three_phase_controller, commutator_counter], local = [motor_step])]
+    fn commutate_bldc(mut cx: commutate_bldc::Context) {
         let step = cx.local.motor_step;
-        cx.shared.bldc.lock(|bldc| {
+        cx.shared.three_phase_controller.lock(|three_phase_controller| {
             // Currently not checking if BLDC enabled, so
             // commutation will happen even if PWM is off.
-            bldc.set_step(&step);
+            three_phase_controller.set_step(&step);
             step.next();
         });
 
@@ -96,5 +95,4 @@ mod app {
             counter.clear_interrupt(timer::Event::Update);
         });
     }
-        */
 }
