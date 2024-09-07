@@ -1,19 +1,65 @@
+use core::{pin::Pin, ptr::{addr_of, addr_of_mut}};
+
+use cortex_m::asm::nop;
 use pwm::ThreeChannelPwm;
+use rtic::Mutex;
 use stm32f7xx_hal::{
     gpio::{Output, PA0, PA15, PA8, PB4, PF10, PF9, PH6, PI0, PI2},
-    pac::{ADC3, RCC, TIM1, TIM2, TIM5},
+    pac::{ADC3, DMA2, RCC, TIM1, TIM2, TIM5},
 };
 
-use crate::app::adc_task;
+use crate::app::{adc_task, dma_task};
 
 pub mod pwm;
 
-pub fn adc_task(cx: adc_task::Context<'_>) {
-    // Implement me
-    defmt::info!("ADC done");
+pub fn dma_task(mut cx: dma_task::Context<'_>) {
+    defmt::info!("DMA interrupt");
 
-    
-    
+    cx.shared
+        .three_phase_controller
+        .lock(|three_phase_controller| {
+            if three_phase_controller.dma.lisr.read().tcif0().bit() {
+                defmt::info!("DMA transfer complete");
+		
+		// Clear the overrun interrupt flag
+		three_phase_controller
+                    .dma
+                    .lifcr
+                    .write(|w| w.ctcif0().set_bit());
+
+		// Print the values
+		//defmt::info!(three_phase_controller.buffer);
+		
+	    }
+	});
+}
+
+pub fn adc_task(mut cx: adc_task::Context<'_>) {
+    cx.shared
+        .three_phase_controller
+        .lock(|three_phase_controller| {
+            // Check if the overrun bit is set
+            if three_phase_controller.adc.sr.read().ovr().bit() {
+                defmt::info!("ADC overrun");
+
+                // Clear the overrun interrupt flag
+                three_phase_controller
+                    .adc
+                    .sr
+                    .modify(|_, w| w.ovr().clear_bit());
+            }
+
+            // Check if the end of conversion bit is set
+            if three_phase_controller.adc.sr.read().eoc().bit() {
+                defmt::info!("ADC end of conversion");
+
+                // Clear the overrun interrupt flag
+                three_phase_controller
+                    .adc
+                    .sr
+                    .modify(|_, w| w.eoc().clear_bit());
+            }
+        });
 }
 
 /// Simple wrapper for the numbers 0 to 5
@@ -58,7 +104,6 @@ impl MotorStep {
 ///
 ///
 pub struct ThreePhaseController {
-
     pwm_channels: ThreeChannelPwm,
 
     // Enable 1, CN4, pin 4
@@ -69,17 +114,25 @@ pub struct ThreePhaseController {
 
     // Enable 3, CN7, pin 1
     en3: PI2<Output>,
-    
+
     // Duty cycle (sets motor power)
     duty: f32,
 
-    adc: ADC3
+    adc: ADC3,
+
+    // The DMA peripheral handling the ADC-to-memory transfers
+    dma: DMA2,
+
+    // The buffer into which ADC conversion are transferred by DMA
+    //adc_buffer: Pin<&mut [u16; 3]>,
+    //adc_buffer: SomeOwningWrapperAroundArray<u16; 3>
+
+    //buf: Rc<u32>,
 }
 
 impl ThreePhaseController {
-
     pub fn set_period(&mut self, period: u16) {
-	self.pwm_channels.set_period(period);
+        self.pwm_channels.set_period(period);
     }
 
     pub fn new(
@@ -93,64 +146,111 @@ impl ThreePhaseController {
         pin2: PA15,
         tim3: TIM5,
         pin3: PI0,
-	adc: ADC3,
-	apin1: PA0,
-	apin2: PF10,
-	apin3: PF9,
+        adc: ADC3,
+        apin1: PA0,
+        apin2: PF10,
+        apin3: PF9,
+        dma: DMA2,
     ) -> Self {
-	let pwm_channels  = ThreeChannelPwm::new(
-            rcc,
-            tim1,
-            pin1,
-            tim2,
-            pin2,
-            tim3,
-            pin3,
-	);
+        let pwm_channels = ThreeChannelPwm::new(rcc, tim1, pin1, tim2, pin2, tim3, pin3);
 
-	// Set up ADC3 clocks
-	rcc.apb2enr.modify(|_, w| w.adc3en().bit(true));
+        // Set up ADC3 clocks
+        rcc.apb2enr.modify(|_, w| w.adc3en().bit(true));
 
-	// ADC setup (PAC, not HAL). References to page numbers
-	// refer to the RM0385 rev 8 reference manual.
-	
-	// Set up the analog input GPIO pins
-	apin1.into_analog();
-	apin2.into_analog();
-	apin3.into_analog();
-	
-	// Turn ADC on by setting ADON in CR2 register (p. 415)
-	adc.cr2.modify(|_, w| w.adon().bit(true));
+        // ADC setup (PAC, not HAL). References to page numbers
+        // refer to the RM0385 rev 8 reference manual.
 
-	// ADC channels are multiplexed, and multiple conversions
-	// may be performed in sequence. To set up a regular group
-	// with three conversions (p. 419), write 2 to L[3:0] in SQR1.
-	adc.sqr1.modify(|_, w| w.l().bits(2));
+        // Set up the analog input GPIO pins
+        apin1.into_analog();
+        apin2.into_analog();
+        apin3.into_analog();
 
-	// To set the order of conversions, write:
-	//
-	// - 0 to SQ1[4:0] in SQR3, first conversion is channel 0 (IN0).
-	// - 8 to SQ2[4:0] in SQR3, second conversion is channel 8 (IN8)
-	// - 7 to SQ3[4:0] in SQR3, second conversion is channel 7 (IN7)
-	adc.sqr3.modify(|_, w| unsafe { w.sq1().bits(0) }); // PA0
-	adc.sqr3.modify(|_, w| unsafe { w.sq2().bits(8) }); // PF10
-	adc.sqr3.modify(|_, w| unsafe { w.sq3().bits(7) }); // PF9
+        // Turn ADC on by setting ADON in CR2 register (p. 415)
+        adc.cr2.modify(|_, w| w.adon().bit(true));
 
-	// Set the ADC to trigger on rising edge of TIM1 channel 1
-	adc.cr2.modify(|_, w| w.exten().bits(0b01));
-	adc.cr2.modify(|_, w| unsafe { w.extsel().bits(0b0000) });
+        // ADC channels are multiplexed, and multiple conversions
+        // may be performed in sequence. To set up a regular group
+        // with three conversions (p. 419), write 2 to L[3:0] in SQR1.
+        adc.sqr1.modify(|_, w| w.l().bits(2));
 
-	// Enable the ADC interrupt for end of conversion (EOC)
-	adc.cr1.modify(|_, w| w.eocie().bit(true));
-	
-	
+        // To set the order of conversions, write:
+        //
+        // - 0 to SQ1[4:0] in SQR3, first conversion is channel 0 (IN0).
+        // - 8 to SQ2[4:0] in SQR3, second conversion is channel 8 (IN8)
+        // - 7 to SQ3[4:0] in SQR3, second conversion is channel 7 (IN7)
+        adc.sqr3.modify(|_, w| unsafe { w.sq1().bits(0) }); // PA0
+        adc.sqr3.modify(|_, w| unsafe { w.sq2().bits(8) }); // PF10
+        adc.sqr3.modify(|_, w| unsafe { w.sq3().bits(7) }); // PF9
+
+        // Set the ADC to trigger on rising edge of TIM1 channel 1
+        adc.cr2.modify(|_, w| w.exten().bits(0b01));
+        adc.cr2.modify(|_, w| unsafe { w.extsel().bits(0b0000) });
+
+        // adc.cr1.modify(|_, w| {
+        //     w.eocie().set_bit(); // end-of-conversion
+        //     w.ovrie().set_bit() // overrun detection
+        // });
+
+        // Enable DMA mode on the ADC side
+        adc.cr2.modify(|_, w| w.dma().set_bit());
+
+        // Turn on the DMA2 clock
+        rcc.ahb1enr.modify(|_, w| w.dma2en().set_bit());
+        nop();
+        nop();
+
+        // Set the source address (the DR register of the ADC)
+        // TODO: there must be a way to get the DR address from the PAC
+        let adc_base_addr = ADC3::ptr() as u32;
+        let adc_dr_addr = adc_base_addr + 0x4c;
+        dma.st[0].par.write(|w| unsafe { w.bits(adc_dr_addr) });
+
+        // Make DMA destination memory location
+        // TODO fix safety/why safe?
+        static mut BUFFER: [u16; 3] = [0; 3];
+	let mut adc_buffer = unsafe { Pin::new(&mut *addr_of_mut!(BUFFER)) };
+
+        // Set the memory destination address
+        dma.st[0].m0ar.write(|w| unsafe { w.bits(addr_of_mut!(BUFFER) as u32) });
+
+        // Set to transfer three value (after each ADC channel conversion)
+        dma.st[0].ndtr.write(|w| w.ndt().bits(3));
+
+        // Set control register
+        dma.st[0].cr.modify(|_, w| {
+	    
+            // Configure DMA 2 (stream 0) to transfer from ADC to memory
+            unsafe { w.dir().bits(0b00) };
+
+            // Set both the peripheral size and memory size to half word (16 bits),
+            // and set memory address to auto-increment
+            unsafe {
+                w.psize().bits(0b01);
+                w.msize().bits(0b01);
+            }
+            w.minc().set_bit();
+
+            // Set channel 2 on stream zero (tied to ADC3, see table 26 p. 226)
+            w.chsel().bits(2);
+
+            // Set interrupts
+            w.tcie().set_bit(); // transfer complete
+            w.teie().set_bit(); // transfer error
+            w.dmeie().set_bit(); // direct mode error
+
+            // Enable DMA stream 0
+            w.en().set_bit()
+        });
+
         Self {
-	    pwm_channels,
+            pwm_channels,
             en1,
             en2,
             en3,
             duty: 0.0,
-	    adc
+            adc,
+            dma,
+	    //adc_buffer,
         }
     }
 

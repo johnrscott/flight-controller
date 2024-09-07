@@ -151,11 +151,10 @@ Use left and right to move inside input."
                         // We can write via normal function if formatting not needed
                         cli.writer().write_str("Cli can't shutdown now")?;
                     }
-                    Base::PwmDuty { duty } => {
-                        cx.shared.three_phase_controller.lock(|bldc| {
-                            bldc.set_duty(duty)
-                        })
-                    }
+                    Base::PwmDuty { duty } => cx
+                        .shared
+                        .three_phase_controller
+                        .lock(|bldc| bldc.set_duty(duty)),
                     Base::StepTime { time } => {
                         cx.shared.commutator_counter.lock(|counter| {
                             counter.start(time.micros()).unwrap();

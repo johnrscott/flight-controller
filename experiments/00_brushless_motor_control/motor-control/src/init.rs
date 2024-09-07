@@ -6,7 +6,7 @@ use stm32f7xx_hal::prelude::*;
 use stm32f7xx_hal::rcc::{self, HSEClock};
 use stm32f7xx_hal::timer::Event;
 
-use crate::CLOCK_FREQ_HZ;t
+use crate::CLOCK_FREQ_HZ;
 
 pub fn init(cx: init::Context) -> (Shared, Local) {
     defmt::info!("Starting RTIC init task");
@@ -33,11 +33,11 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
     let en1 = gpiob.pb4.into_push_pull_output();
     let en2 = gpioh.ph6.into_push_pull_output();
     let en3 = gpioi.pi2.into_push_pull_output();
-    
+
     let mut three_phase_controller = ThreePhaseController::new(
-	en1,
-	en2,
-	en3,
+        en1,
+        en2,
+        en3,
         &device.RCC,
         device.TIM1,
         gpioa.pa8,
@@ -45,12 +45,13 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
         gpioa.pa15.into(),
         device.TIM5,
         gpioi.pi0,
-	device.ADC3,
-	gpioa.pa0,
-	gpiof.pf10,
-	gpiof.pf9,
+        device.ADC3,
+        gpioa.pa0,
+        gpiof.pf10,
+        gpiof.pf9,
+        device.DMA2,
     );
-    
+
     three_phase_controller.enable(true);
     three_phase_controller.set_period(100);
     three_phase_controller.set_duty(0.0);
@@ -106,8 +107,8 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
     (
         Shared {
             three_phase_controller,
-	    commutator_counter: counter,
-	},
+            commutator_counter: counter,
+        },
         Local {
             serial_rx,
             serial_tx,

@@ -28,7 +28,12 @@ impl ThreeChannelPwm {
         let pwm2 = Pwm2::new(rcc, tim2, pin2);
         let pwm3 = Pwm3::new(rcc, tim3, pin3);
 
-        Self { pwm1, pwm2, pwm3, period: 1000 }
+        Self {
+            pwm1,
+            pwm2,
+            pwm3,
+            period: 1000,
+        }
     }
 
     pub fn enable(&self, enable: bool) {
@@ -36,14 +41,14 @@ impl ThreeChannelPwm {
     }
 
     pub fn set_period(&mut self, period: u16) {
-	self.period = period;
+        self.period = period;
         self.pwm1.set_period(period);
         self.pwm2.set_period(period);
         self.pwm3.set_period(period);
     }
 
     pub fn set_duty(&self, which: u8, duty: f32) {
-	let duty = (duty * self.period as f32) as u16;
+        let duty = (duty * self.period as f32) as u16;
         match which {
             0 => self.pwm1.set_duty(duty),
             1 => self.pwm2.set_duty(duty),

@@ -13,17 +13,16 @@ pub const SYSTICK_RATE_HZ: u32 = 1000;
 #[rtic::app(device = stm32f7xx_hal::pac, dispatchers = [EXTI0, EXTI1, EXTI2])]
 mod app {
 
-    use crate::motor::{ThreePhaseController, MotorStep};
+    use crate::motor::{MotorStep, ThreePhaseController};
     use crate::uart_serial::SerialTx;
     use rtic_monotonics::systick::prelude::*;
     use stm32f7xx_hal::gpio::{Output, PI1};
     use stm32f7xx_hal::pac::{TIM3, USART1};
     use stm32f7xx_hal::serial::Rx;
     use stm32f7xx_hal::timer::{self, CounterUs};
-    
 
     use crate::init::init;
-    use crate::motor::adc_task;
+    use crate::motor::{adc_task, dma_task};
     use crate::uart_serial::serial_task;
     use crate::SYSTICK_RATE_HZ;
 
@@ -32,7 +31,7 @@ mod app {
     #[shared]
     pub struct Shared {
         pub three_phase_controller: ThreePhaseController,
-        pub commutator_counter: CounterUs<TIM3>
+        pub commutator_counter: CounterUs<TIM3>,
     }
 
     #[local]
@@ -53,6 +52,9 @@ mod app {
 
         #[task(binds = ADC, priority = 3, shared=[three_phase_controller])]
         fn adc_task(cx: adc_task::Context);
+
+        #[task(binds = DMA2_STREAM0, priority = 3, shared=[three_phase_controller])]
+        fn dma_task(cx: dma_task::Context);
     }
 
     // Optional idle, can be removed if not needed.
@@ -82,12 +84,14 @@ mod app {
     #[task(binds = TIM3, priority = 10, shared = [three_phase_controller, commutator_counter], local = [motor_step])]
     fn commutate_bldc(mut cx: commutate_bldc::Context) {
         let step = cx.local.motor_step;
-        cx.shared.three_phase_controller.lock(|three_phase_controller| {
-            // Currently not checking if BLDC enabled, so
-            // commutation will happen even if PWM is off.
-            three_phase_controller.set_step(&step);
-            step.next();
-        });
+        cx.shared
+            .three_phase_controller
+            .lock(|three_phase_controller| {
+                // Currently not checking if BLDC enabled, so
+                // commutation will happen even if PWM is off.
+                three_phase_controller.set_step(&step);
+                step.next();
+            });
 
         // Clear to prevent immediate re-entry into ISR
         cx.shared.commutator_counter.lock(|counter| {
