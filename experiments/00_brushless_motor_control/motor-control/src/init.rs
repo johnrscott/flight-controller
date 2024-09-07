@@ -6,7 +6,7 @@ use stm32f7xx_hal::prelude::*;
 use stm32f7xx_hal::rcc::{self, HSEClock};
 use stm32f7xx_hal::timer::Event;
 
-use crate::CLOCK_FREQ_HZ;
+use crate::CLOCK_FREQ_HZ;t
 
 pub fn init(cx: init::Context) -> (Shared, Local) {
     defmt::info!("Starting RTIC init task");

@@ -10,7 +10,9 @@ pub mod pwm;
 
 pub fn adc_task(cx: adc_task::Context<'_>) {
     // Implement me
+    defmt::info!("ADC done");
 
+    
     
 }
 
@@ -122,7 +124,7 @@ impl ThreePhaseController {
 
 	// ADC channels are multiplexed, and multiple conversions
 	// may be performed in sequence. To set up a regular group
-	// with three conversions (p. 419), write 2 to L[3:0] in SQR1....
+	// with three conversions (p. 419), write 2 to L[3:0] in SQR1.
 	adc.sqr1.modify(|_, w| w.l().bits(2));
 
 	// To set the order of conversions, write:
@@ -134,6 +136,14 @@ impl ThreePhaseController {
 	adc.sqr3.modify(|_, w| unsafe { w.sq2().bits(8) }); // PF10
 	adc.sqr3.modify(|_, w| unsafe { w.sq3().bits(7) }); // PF9
 
+	// Set the ADC to trigger on rising edge of TIM1 channel 1
+	adc.cr2.modify(|_, w| w.exten().bits(0b01));
+	adc.cr2.modify(|_, w| unsafe { w.extsel().bits(0b0000) });
+
+	// Enable the ADC interrupt for end of conversion (EOC)
+	adc.cr1.modify(|_, w| w.eocie().bit(true));
+	
+	
         Self {
 	    pwm_channels,
             en1,
