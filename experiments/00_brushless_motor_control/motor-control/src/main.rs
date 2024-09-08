@@ -68,11 +68,17 @@ mod app {
         }
     }
 
-    #[task(priority = 2)]
-    async fn hello_loop(_cx: hello_loop::Context) {
+    #[task(priority = 2, shared=[three_phase_controller])]
+    async fn hello_loop(mut cx: hello_loop::Context) {
         loop {
-            Mono::delay(1.secs()).await;
-            defmt::info!("Hello every 1s!");
+	    cx.shared
+		.three_phase_controller
+		.lock(|c| {
+
+		    defmt::info!("Neutral voltage: {}", *c.adc_buffer);
+		});
+		    
+            Mono::delay(100.millis()).await;
         }
     }
 

@@ -17,13 +17,13 @@ use crate::app::{adc_task, dma_task};
 pub mod pwm;
 
 pub fn dma_task(mut cx: dma_task::Context<'_>) {
-    defmt::info!("DMA interrupt");
+    //defmt::info!("DMA interrupt");
 
     cx.shared
         .three_phase_controller
         .lock(|three_phase_controller| {
             if three_phase_controller.dma.lisr.read().tcif0().bit() {
-                defmt::info!("DMA transfer complete");
+                //defmt::info!("DMA transfer complete");
 
                 // Clear the interrupt flag
                 three_phase_controller
@@ -32,7 +32,7 @@ pub fn dma_task(mut cx: dma_task::Context<'_>) {
                     .write(|w| w.ctcif0().set_bit());
 
                 // Print the values
-                defmt::info!("{}", *three_phase_controller.adc_buffer);
+                //defmt::info!("{}", *three_phase_controller.adc_buffer);
             }
 
             if three_phase_controller.dma.lisr.read().teif0().bit() {
@@ -147,10 +147,11 @@ pub struct ThreePhaseController {
     dma: DMA2,
 
     // The buffer into which ADC conversion are transferred by DMA
-    adc_buffer: Box<[u16; 3]>,
+    pub adc_buffer: Box<[u16; 3]>,
 }
 
 impl ThreePhaseController {
+    
     pub fn set_period(&mut self, period: u16) {
         self.pwm_channels.set_period(period);
     }
@@ -174,7 +175,7 @@ impl ThreePhaseController {
     ) -> Self {
         let pwm_channels = ThreeChannelPwm::new(rcc, tim1, pin1, tim2, pin2, tim3, pin3);
 
-        // Set up ADC3 clocks
+        // Set up ADC3 clocks-
         rcc.apb2enr.modify(|_, w| w.adc3en().bit(true));
 
         // ADC setup (PAC, not HAL). References to page numbers
@@ -215,9 +216,15 @@ impl ThreePhaseController {
         });
 
         adc.cr1.modify(|_, w| {
-            //w.eocie().set_bit(); // end-of-conversion
+
+	    // Enable scan mode (convert all channels in regular sequence)
+	    w.scan().set_bit();
+
+	    //w.eocie().set_bit(); // end-of-conversion
             w.ovrie().set_bit() // overrun detection
-        });
+
+
+	});
 
         // Turn on the DMA2 clock
         rcc.ahb1enr.modify(|_, w| w.dma2en().set_bit());

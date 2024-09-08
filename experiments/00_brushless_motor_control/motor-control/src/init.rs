@@ -57,8 +57,8 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
     );
 
     three_phase_controller.enable(true);
-    three_phase_controller.set_period(100);
-    three_phase_controller.set_duty(0.0);
+    three_phase_controller.set_period(20000);
+    three_phase_controller.set_duty(0.4);
 
     // The DISCO board has a 25 MHz oscillator connected to
     // the HSE input. Configure the MCU to use this external
@@ -96,7 +96,7 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
 
     // Set up the motor commutation timer
     let mut counter = device.TIM3.counter_us(&clocks);
-    counter.start(5.millis()).unwrap();
+    counter.start(3.millis()).unwrap();
     counter.listen(Event::Update);
 
     // Set up the green output LED
