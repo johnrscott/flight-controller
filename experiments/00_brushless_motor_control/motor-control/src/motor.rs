@@ -202,17 +202,22 @@ impl ThreePhaseController {
         adc.sqr3.modify(|_, w| unsafe { w.sq2().bits(8) }); // PF10
         adc.sqr3.modify(|_, w| unsafe { w.sq3().bits(7) }); // PF9
 
-        // Set the ADC to trigger on rising edge of TIM1 channel 1
-        adc.cr2.modify(|_, w| w.exten().bits(0b01));
-        adc.cr2.modify(|_, w| unsafe { w.extsel().bits(0b0000) });
+        adc.cr2.modify(|_, w| {
+            // Set the ADC to trigger on rising edge of TIM1 channel 1
+            w.exten().bits(0b01);
+            unsafe { w.extsel().bits(0b0000); }
 
-        // adc.cr1.modify(|_, w| {
-        //     w.eocie().set_bit(); // end-of-conversion
-        //     w.ovrie().set_bit() // overrun detection
-        // });
+            // Enable DMA mode on the ADC side
+            w.dma().set_bit();
 
-        // Enable DMA mode on the ADC side
-        adc.cr2.modify(|_, w| w.dma().set_bit());
+            // Set the ADC to continue issuing requests on new conversions
+            w.dds().set_bit()
+        });
+
+        adc.cr1.modify(|_, w| {
+            //w.eocie().set_bit(); // end-of-conversion
+            w.ovrie().set_bit() // overrun detection
+        });
 
         // Turn on the DMA2 clock
         rcc.ahb1enr.modify(|_, w| w.dma2en().set_bit());
@@ -253,6 +258,9 @@ impl ThreePhaseController {
 
             // Set channel 2 on stream zero (tied to ADC3, see table 26 p. 226)
             w.chsel().bits(2);
+
+            // Set the DMA to use circular mode
+            w.circ().set_bit();
 
             // Set interrupts
             w.tcie().set_bit(); // transfer complete
