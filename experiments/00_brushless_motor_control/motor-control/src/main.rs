@@ -71,13 +71,14 @@ mod app {
     #[task(priority = 2, shared=[three_phase_controller])]
     async fn hello_loop(mut cx: hello_loop::Context) {
         loop {
-	    cx.shared
-		.three_phase_controller
-		.lock(|c| {
+            cx.shared.three_phase_controller.lock(|c| {
+                defmt::info!(
+                    "Neutral voltage: {}, ADC: {}",
+                    c.neutral_voltage,
+                    *c.adc_buffer
+                );
+            });
 
-		    defmt::info!("Neutral voltage: {}", *c.adc_buffer);
-		});
-		    
             Mono::delay(100.millis()).await;
         }
     }

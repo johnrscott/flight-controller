@@ -19,42 +19,34 @@ pub mod pwm;
 pub fn dma_task(mut cx: dma_task::Context<'_>) {
     //defmt::info!("DMA interrupt");
 
-    cx.shared
-        .three_phase_controller
-        .lock(|three_phase_controller| {
-            if three_phase_controller.dma.lisr.read().tcif0().bit() {
-                //defmt::info!("DMA transfer complete");
+    cx.shared.three_phase_controller.lock(|c| {
+        if c.dma.lisr.read().tcif0().bit() {
+            //defmt::info!("DMA transfer complete");
 
-                // Clear the interrupt flag
-                three_phase_controller
-                    .dma
-                    .lifcr
-                    .write(|w| w.ctcif0().set_bit());
+            // Clear the interrupt flag
+            c.dma.lifcr.write(|w| w.ctcif0().set_bit());
 
-                // Print the values
-                //defmt::info!("{}", *three_phase_controller.adc_buffer);
-            }
+            // Calculate neutral voltage
+            c.neutral_voltage = c.adc_buffer.iter().sum();
 
-            if three_phase_controller.dma.lisr.read().teif0().bit() {
-                defmt::info!("DMA transfer error");
+            // Print the values
+            //defmt::info!("{}", *three_phase_controller.adc_buffer);
+        }
 
-                // Clear the interrupt flag
-                three_phase_controller
-                    .dma
-                    .lifcr
-                    .write(|w| w.cteif0().set_bit());
-            }
+        if c.dma.lisr.read().teif0().bit() {
+            defmt::info!("DMA transfer error");
 
-            if three_phase_controller.dma.lisr.read().dmeif0().bit() {
-                defmt::info!("DMA direct mode error");
+            // Clear the interrupt flag
+            c.dma.lifcr.write(|w| w.cteif0().set_bit());
+        }
 
-                // Clear the interrupt flag
-                three_phase_controller
-                    .dma
-                    .lifcr
-                    .write(|w| w.cdmeif0().set_bit());
-            }
-        });
+        if c.dma.lisr.read().dmeif0().bit() {
+            defmt::info!("DMA direct mode error");
+
+            // Clear the interrupt flag
+            c.dma.lifcr.write(|w| w.cdmeif0().set_bit());
+        }
+    });
 }
 
 pub fn adc_task(mut cx: adc_task::Context<'_>) {
@@ -148,10 +140,11 @@ pub struct ThreePhaseController {
 
     // The buffer into which ADC conversion are transferred by DMA
     pub adc_buffer: Box<[u16; 3]>,
+
+    pub neutral_voltage: u16,
 }
 
 impl ThreePhaseController {
-    
     pub fn set_period(&mut self, period: u16) {
         self.pwm_channels.set_period(period);
     }
@@ -206,25 +199,40 @@ impl ThreePhaseController {
         adc.cr2.modify(|_, w| {
             // Set the ADC to trigger on rising edge of TIM1 channel 1
             w.exten().bits(0b01);
-            unsafe { w.extsel().bits(0b0000); }
+            unsafe {
+                w.extsel().bits(0b0000);
+            }
 
             // Enable DMA mode on the ADC side
             w.dma().set_bit();
 
-            // Set the ADC to continue issuing requests on new conversions
+            // Set the ADC to continue issuing DMA requests on new conversions
             w.dds().set_bit()
         });
 
+        // Set sampling times per channel
+
+        adc.smpr2.modify(|_, w| {
+            // Can't seem to write these fields using the normal APIn1
+            // Something to do with enumerated values?
+            let sample_cycles = 0b000;
+            let smp0 = sample_cycles << 0;
+            let smp8 = sample_cycles << 24;
+            let smp7 = sample_cycles << 21;
+
+            unsafe { w.bits(smp0 | smp8 | smp7) }
+        });
+
         adc.cr1.modify(|_, w| {
+            // Enable scan mode (convert all channels in regular sequence)
+            w.scan().set_bit();
 
-	    // Enable scan mode (convert all channels in regular sequence)
-	    w.scan().set_bit();
+            // Set ADC resolution
+            //w.res().bits(0b11); // 6 bit
 
-	    //w.eocie().set_bit(); // end-of-conversion
+            //w.eocie().set_bit(); // end-of-conversion
             w.ovrie().set_bit() // overrun detection
-
-
-	});
+        });
 
         // Turn on the DMA2 clock
         rcc.ahb1enr.modify(|_, w| w.dma2en().set_bit());
@@ -287,6 +295,7 @@ impl ThreePhaseController {
             adc,
             dma,
             adc_buffer,
+            neutral_voltage: 0,
         }
     }
 

@@ -57,7 +57,7 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
     );
 
     three_phase_controller.enable(true);
-    three_phase_controller.set_period(20000);
+    three_phase_controller.set_period(2000);
     three_phase_controller.set_duty(0.4);
 
     // The DISCO board has a 25 MHz oscillator connected to

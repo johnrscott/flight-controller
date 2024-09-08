@@ -28,8 +28,7 @@ impl ThreeChannelPwm {
         let pwm2 = Pwm2::new(rcc, tim2, pin2);
         let pwm3 = Pwm3::new(rcc, tim3, pin3);
 
-	
-	let period = 10000;
+        let period = 10000;
         let mut three_channel_pwm = Self {
             pwm1,
             pwm2,
@@ -37,8 +36,8 @@ impl ThreeChannelPwm {
             period,
         };
 
-	three_channel_pwm.set_period(period);
-	three_channel_pwm
+        three_channel_pwm.set_period(period);
+        three_channel_pwm
     }
 
     pub fn enable(&self, enable: bool) {
