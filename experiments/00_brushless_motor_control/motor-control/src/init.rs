@@ -1,5 +1,6 @@
 use crate::app::Mono;
 use crate::app::{init, Local, Shared};
+use crate::heap::init_heap;
 use crate::motor::{MotorStep, ThreePhaseController};
 use crate::uart_serial::init_uart_serial;
 use stm32f7xx_hal::prelude::*;
@@ -12,6 +13,9 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
     defmt::info!("Starting RTIC init task");
 
     Mono::start(cx.core.SYST, CLOCK_FREQ_HZ);
+
+    // Initialise the heap
+    init_heap();
 
     // Device specific peripherals
     let device = cx.device;

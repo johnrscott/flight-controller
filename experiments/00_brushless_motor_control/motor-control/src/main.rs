@@ -1,6 +1,9 @@
 #![no_main]
 #![no_std]
 
+extern crate alloc;
+
+pub mod heap;
 pub mod init;
 pub mod motor;
 pub mod uart_serial;

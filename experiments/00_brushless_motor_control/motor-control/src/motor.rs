@@ -1,5 +1,9 @@
-use core::{pin::Pin, ptr::{addr_of, addr_of_mut}};
+use core::{
+    pin::Pin,
+    ptr::{addr_of, addr_of_mut},
+};
 
+use alloc::{boxed::Box, vec::Vec};
 use cortex_m::asm::nop;
 use pwm::ThreeChannelPwm;
 use rtic::Mutex;
@@ -20,18 +24,37 @@ pub fn dma_task(mut cx: dma_task::Context<'_>) {
         .lock(|three_phase_controller| {
             if three_phase_controller.dma.lisr.read().tcif0().bit() {
                 defmt::info!("DMA transfer complete");
-		
-		// Clear the overrun interrupt flag
-		three_phase_controller
+
+                // Clear the interrupt flag
+                three_phase_controller
                     .dma
                     .lifcr
                     .write(|w| w.ctcif0().set_bit());
 
-		// Print the values
-		//defmt::info!(three_phase_controller.buffer);
-		
-	    }
-	});
+                // Print the values
+                defmt::info!("{}", *three_phase_controller.adc_buffer);
+            }
+
+            if three_phase_controller.dma.lisr.read().teif0().bit() {
+                defmt::info!("DMA transfer error");
+
+                // Clear the interrupt flag
+                three_phase_controller
+                    .dma
+                    .lifcr
+                    .write(|w| w.cteif0().set_bit());
+            }
+
+            if three_phase_controller.dma.lisr.read().dmeif0().bit() {
+                defmt::info!("DMA direct mode error");
+
+                // Clear the interrupt flag
+                three_phase_controller
+                    .dma
+                    .lifcr
+                    .write(|w| w.cdmeif0().set_bit());
+            }
+        });
 }
 
 pub fn adc_task(mut cx: adc_task::Context<'_>) {
@@ -124,10 +147,7 @@ pub struct ThreePhaseController {
     dma: DMA2,
 
     // The buffer into which ADC conversion are transferred by DMA
-    //adc_buffer: Pin<&mut [u16; 3]>,
-    //adc_buffer: SomeOwningWrapperAroundArray<u16; 3>
-
-    //buf: Rc<u32>,
+    adc_buffer: Box<[u16; 3]>,
 }
 
 impl ThreePhaseController {
@@ -206,19 +226,20 @@ impl ThreePhaseController {
         dma.st[0].par.write(|w| unsafe { w.bits(adc_dr_addr) });
 
         // Make DMA destination memory location
-        // TODO fix safety/why safe?
-        static mut BUFFER: [u16; 3] = [0; 3];
-	let mut adc_buffer = unsafe { Pin::new(&mut *addr_of_mut!(BUFFER)) };
+        // Boxed Vec ensures that the Vec memory is not moved when
+        // the
+        let adc_buffer = Box::new([0u16; 3]);
 
         // Set the memory destination address
-        dma.st[0].m0ar.write(|w| unsafe { w.bits(addr_of_mut!(BUFFER) as u32) });
+        dma.st[0]
+            .m0ar
+            .write(|w| unsafe { w.bits((*adc_buffer).as_ptr() as u32) });
 
         // Set to transfer three value (after each ADC channel conversion)
         dma.st[0].ndtr.write(|w| w.ndt().bits(3));
 
         // Set control register
         dma.st[0].cr.modify(|_, w| {
-	    
             // Configure DMA 2 (stream 0) to transfer from ADC to memory
             unsafe { w.dir().bits(0b00) };
 
@@ -250,7 +271,7 @@ impl ThreePhaseController {
             duty: 0.0,
             adc,
             dma,
-	    //adc_buffer,
+            adc_buffer,
         }
     }
 
