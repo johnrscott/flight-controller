@@ -52,7 +52,13 @@ impl ThreeChannelPwm {
     }
 
     pub fn set_duty(&self, which: u8, duty: f32) {
-        let duty = (duty * self.period as f32) as u16;
+
+	// This floating point stuff is giving problems
+	let duty = if duty == 1.0 {
+	    u16::MAX
+	} else {
+	    (duty * self.period as f32) as u16
+	};
         match which {
             0 => self.pwm1.set_duty(duty),
             1 => self.pwm2.set_duty(duty),

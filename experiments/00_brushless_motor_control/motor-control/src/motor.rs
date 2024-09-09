@@ -27,7 +27,7 @@ pub fn dma_task(mut cx: dma_task::Context<'_>) {
             c.dma.lifcr.write(|w| w.ctcif0().set_bit());
 
             // Calculate neutral voltage
-            c.neutral_voltage = c.adc_buffer.iter().sum();
+            c.neutral_voltage = c.adc_buffer.iter().sum::<u16>() / 3;
 
             // Print the values
             //defmt::info!("{}", *three_phase_controller.adc_buffer);
@@ -308,67 +308,154 @@ impl ThreePhaseController {
         self.pwm_channels.enable(enable);
     }
 
+    /// If the half bridge is enabled (i.e. not high-Z), set
+    /// it to pull-up (high-side is on and low-side is off),
+    /// or pull-down (high-side is off and low-side is on).
+    /// Note that calling this function and passing pull-up
+    /// as false pulls down instead. If the high-Z state is
+    /// enabled, then this function has no immediate effect
+    /// (but the state will persist if high-Z is removed).
+    fn pull_phase_up(&mut self, which: u8, pull_up: bool) {
+	if pull_up {
+	    match which {
+		// high-side always on
+		0 => self.en1.set_high(),
+		1 => self.en2.set_high(),
+		2 => self.en3.set_high(),
+		_ => panic!("Invalid phase number (wanted 0, 1, or 2)"),
+	    }	    
+	} else {
+	    match which {
+		// high-side always on
+		0 => self.en1.set_low(),
+		1 => self.en2.set_low(),
+		2 => self.en3.set_low(),
+		_ => panic!("Invalid phase number (wanted 0, 1, or 2)"),
+	    }	    
+	}
+    }
+    
+    /// Set one of the phases as a power input
+    fn set_line_phase(&mut self, which: u8) {
+
+	// Now, en is tied to the high/low pin and pwm
+	// is tied to the high-Z (i.e. turn both MOSFETS off)
+	// To set a phase as the input, we want to alternate
+	// it between the high-side on and high-Z states (so
+	// it alternates driving and floating).
+        self.pwm_channels.set_duty(which, self.duty); // module high-Z
+	self.pull_phase_up(which, true);
+    }
+
+    /// Set one of the phases as a neutral (return) path
+    fn set_neutral_phase(&mut self, which: u8) {
+
+	// Now, en is tied to the high/low pin and pwm
+	// is tied to the high-Z (i.e. turn both MOSFETS off)
+	// To set a phase as the neutral, we want it always
+	// enabled (not high-Z) and always pulled low
+        self.pwm_channels.set_duty(which, 1.0); // never high-Z
+	self.pull_phase_up(which, false);
+
+    }
+
+    /// Set one of the phases as floating
+    fn set_floating_phase(&mut self, which: u8) {
+	// Now, en is tied to the high/low pin and pwm
+	// is tied to the high-Z (i.e. turn both MOSFETS off)
+	// To set a phase as floating, make it always high-Z
+        self.pwm_channels.set_duty(which, 0.0); // always high-Z
+
+	// Pull down for definiteness (no effect, but ties to
+	// ground if subsequently high-Z is removed)
+	self.pull_phase_up(which, false);
+    }
+    
     pub fn set_step(&mut self, step: &MotorStep) {
         match step.step {
             0 => {
                 // In line 1, out line 2
-                self.en1.set_high();
-                self.en2.set_high();
-                self.en3.set_low();
-                self.pwm_channels.set_duty(0, self.duty);
-                self.pwm_channels.set_duty(1, 0.0);
-                self.pwm_channels.set_duty(2, 0.0);
+                // self.en1.set_high();
+                // self.en2.set_high();
+                // self.en3.set_low();
+                // self.pwm_channels.set_duty(0, self.duty);
+                // self.pwm_channels.set_duty(1, 0.0);
+                // self.pwm_channels.set_duty(2, 0.0);
+
+		self.set_floating_phase(2); // Phase 3 is floating
+		self.set_neutral_phase(1); // Phase 2 is neutral
+		self.set_line_phase(0); // Phase 1 is line
             }
 
             1 => {
                 // In line 3, out line 2
-                self.en1.set_low();
-                self.en2.set_high();
-                self.en3.set_high();
-                self.pwm_channels.set_duty(0, 0.0);
-                self.pwm_channels.set_duty(1, 0.0);
-                self.pwm_channels.set_duty(2, self.duty);
-            }
+                // self.en1.set_low();
+                // self.en2.set_high();
+                // self.en3.set_high();
+                // self.pwm_channels.set_duty(0, 0.0);
+                // self.pwm_channels.set_duty(1, 0.0);
+                // self.pwm_channels.set_duty(2, self.duty);
+
+		self.set_floating_phase(0); // Phase 1 is floating
+		self.set_neutral_phase(1); // Phase 2 is neutral
+		self.set_line_phase(2); // Phase 3 is line
+	    }
 
             2 => {
                 // In line 3, out line 1
-                self.en1.set_high();
-                self.en2.set_low();
-                self.en3.set_high();
-                self.pwm_channels.set_duty(0, 0.0);
-                self.pwm_channels.set_duty(1, 0.0);
-                self.pwm_channels.set_duty(2, self.duty);
-            }
+                // self.en1.set_high();
+                // self.en2.set_low();
+                // self.en3.set_high();
+                // self.pwm_channels.set_duty(0, 0.0);
+                // self.pwm_channels.set_duty(1, 0.0);
+                // self.pwm_channels.set_duty(2, self.duty);
+
+		self.set_floating_phase(1); // Phase 2 is floating
+		self.set_neutral_phase(0); // Phase 1 is neutral
+		self.set_line_phase(2); // Phase 3 is line
+	    }
 
             3 => {
                 // In line 2, out line 1
-                self.en1.set_high();
-                self.en2.set_high();
-                self.en3.set_low();
-                self.pwm_channels.set_duty(0, 0.0);
-                self.pwm_channels.set_duty(1, self.duty);
-                self.pwm_channels.set_duty(2, 0.0);
-            }
+                // self.en1.set_high();
+                // self.en2.set_high();
+                // self.en3.set_low();
+                // self.pwm_channels.set_duty(0, 0.0);
+                // self.pwm_channels.set_duty(1, self.duty);
+                // self.pwm_channels.set_duty(2, 0.0);
+
+		self.set_floating_phase(2); // Phase 3 is floating
+		self.set_neutral_phase(0); // Phase 1 is neutral
+		self.set_line_phase(1); // Phase 2 is line
+	    }
 
             4 => {
                 // In line 2, out line 3
-                self.en1.set_low();
-                self.en2.set_high();
-                self.en3.set_high();
-                self.pwm_channels.set_duty(0, 0.0);
-                self.pwm_channels.set_duty(1, self.duty);
-                self.pwm_channels.set_duty(2, 0.0);
-            }
+                // self.en1.set_low();
+                // self.en2.set_high();
+                // self.en3.set_high();
+                // self.pwm_channels.set_duty(0, 0.0);
+                // self.pwm_channels.set_duty(1, self.duty);
+                // self.pwm_channels.set_duty(2, 0.0);
+
+		self.set_floating_phase(0); // Phase 1 is floating
+		self.set_neutral_phase(2); // Phase 3 is neutral
+		self.set_line_phase(1); // Phase 2 is line
+	    }
 
             5 => {
                 // In line 1, out line 3
-                self.en1.set_high();
-                self.en2.set_low();
-                self.en3.set_high();
-                self.pwm_channels.set_duty(0, self.duty);
-                self.pwm_channels.set_duty(1, 0.0);
-                self.pwm_channels.set_duty(2, 0.0);
-            }
+                // self.en1.set_high();
+                // self.en2.set_low();
+                // self.en3.set_high();
+                // self.pwm_channels.set_duty(0, self.duty);
+                // self.pwm_channels.set_duty(1, 0.0);
+                // self.pwm_channels.set_duty(2, 0.0);
+
+		self.set_floating_phase(1); // Phase 2 is floating
+		self.set_neutral_phase(2); // Phase 3 is neutral
+		self.set_line_phase(0); // Phase 1 is line
+	    }
 
             _ => panic!("Invalid value for MotorStep"),
         }
