@@ -43,6 +43,7 @@ mod app {
         pub serial_tx: SerialTx,
         pub serial_rx: Rx<USART1>,
         pub motor_step: MotorStep,
+	pub current_time: u32,
     }
 
     extern "Rust" {
@@ -68,18 +69,30 @@ mod app {
         }
     }
 
-    #[task(priority = 2, shared=[three_phase_controller])]
+    #[task(priority = 2, shared=[three_phase_controller, commutator_counter], local=[current_time])]
     async fn hello_loop(mut cx: hello_loop::Context) {
+	let time = cx.local.current_time; 
         loop {
+	    if *time > 300 {
+		defmt::info!("Setting timer to {}", time);
+		cx.shared.commutator_counter.lock(|counter| {
+                    counter.start(time.micros()).unwrap();
+		});
+
+		*time -= 1;
+	    }
+	    
             cx.shared.three_phase_controller.lock(|c| {
-                defmt::info!(
-                    "Neutral voltage: {}, ADC: {}",
-                    c.neutral_voltage,
-                    *c.adc_buffer
-                );
+
+		
+		// defmt::info!(
+                //     "Neutral voltage: {}, ADC: {}",
+                //     c.neutral_voltage,
+                //     *c.adc_buffer
+                // );
             });
 
-            Mono::delay(100.millis()).await;
+	    Mono::delay(10.millis()).await;
         }
     }
 

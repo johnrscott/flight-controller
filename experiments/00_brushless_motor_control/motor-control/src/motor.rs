@@ -374,87 +374,39 @@ impl ThreePhaseController {
     pub fn set_step(&mut self, step: &MotorStep) {
         match step.step {
             0 => {
-                // In line 1, out line 2
-                // self.en1.set_high();
-                // self.en2.set_high();
-                // self.en3.set_low();
-                // self.pwm_channels.set_duty(0, self.duty);
-                // self.pwm_channels.set_duty(1, 0.0);
-                // self.pwm_channels.set_duty(2, 0.0);
-
-		self.set_floating_phase(2); // Phase 3 is floating
-		self.set_neutral_phase(1); // Phase 2 is neutral
-		self.set_line_phase(0); // Phase 1 is line
+		self.set_floating_phase(2);
+		self.set_neutral_phase(1);
+		self.set_line_phase(0);
             }
 
             1 => {
-                // In line 3, out line 2
-                // self.en1.set_low();
-                // self.en2.set_high();
-                // self.en3.set_high();
-                // self.pwm_channels.set_duty(0, 0.0);
-                // self.pwm_channels.set_duty(1, 0.0);
-                // self.pwm_channels.set_duty(2, self.duty);
-
-		self.set_floating_phase(0); // Phase 1 is floating
-		self.set_neutral_phase(1); // Phase 2 is neutral
-		self.set_line_phase(2); // Phase 3 is line
+		self.set_floating_phase(0);
+		self.set_neutral_phase(1);
+		self.set_line_phase(2);
 	    }
 
             2 => {
-                // In line 3, out line 1
-                // self.en1.set_high();
-                // self.en2.set_low();
-                // self.en3.set_high();
-                // self.pwm_channels.set_duty(0, 0.0);
-                // self.pwm_channels.set_duty(1, 0.0);
-                // self.pwm_channels.set_duty(2, self.duty);
-
-		self.set_floating_phase(1); // Phase 2 is floating
-		self.set_neutral_phase(0); // Phase 1 is neutral
-		self.set_line_phase(2); // Phase 3 is line
+		self.set_floating_phase(1);
+		self.set_neutral_phase(0);
+		self.set_line_phase(2);
 	    }
 
             3 => {
-                // In line 2, out line 1
-                // self.en1.set_high();
-                // self.en2.set_high();
-                // self.en3.set_low();
-                // self.pwm_channels.set_duty(0, 0.0);
-                // self.pwm_channels.set_duty(1, self.duty);
-                // self.pwm_channels.set_duty(2, 0.0);
-
-		self.set_floating_phase(2); // Phase 3 is floating
-		self.set_neutral_phase(0); // Phase 1 is neutral
-		self.set_line_phase(1); // Phase 2 is line
+		self.set_floating_phase(2);
+		self.set_neutral_phase(0);
+		self.set_line_phase(1);
 	    }
 
             4 => {
-                // In line 2, out line 3
-                // self.en1.set_low();
-                // self.en2.set_high();
-                // self.en3.set_high();
-                // self.pwm_channels.set_duty(0, 0.0);
-                // self.pwm_channels.set_duty(1, self.duty);
-                // self.pwm_channels.set_duty(2, 0.0);
-
-		self.set_floating_phase(0); // Phase 1 is floating
-		self.set_neutral_phase(2); // Phase 3 is neutral
-		self.set_line_phase(1); // Phase 2 is line
+		self.set_floating_phase(0);
+		self.set_neutral_phase(2);
+		self.set_line_phase(1);
 	    }
 
             5 => {
-                // In line 1, out line 3
-                // self.en1.set_high();
-                // self.en2.set_low();
-                // self.en3.set_high();
-                // self.pwm_channels.set_duty(0, self.duty);
-                // self.pwm_channels.set_duty(1, 0.0);
-                // self.pwm_channels.set_duty(2, 0.0);
-
-		self.set_floating_phase(1); // Phase 2 is floating
-		self.set_neutral_phase(2); // Phase 3 is neutral
-		self.set_line_phase(0); // Phase 1 is line
+		self.set_floating_phase(1);
+		self.set_neutral_phase(2);
+		self.set_line_phase(0);
 	    }
 
             _ => panic!("Invalid value for MotorStep"),

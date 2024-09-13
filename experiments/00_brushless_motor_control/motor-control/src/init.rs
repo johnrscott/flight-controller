@@ -118,6 +118,7 @@ pub fn init(cx: init::Context) -> (Shared, Local) {
             serial_tx,
             green_led,
             motor_step: MotorStep::new(),
+	    current_time: 1500,
         },
     )
 }
